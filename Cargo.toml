@@ -1,0 +1,29 @@
+[package]
+name = "json-schema-diff"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "json_schema_diff"
+path = "src/lib.rs"
+
+[[bin]]
+required-features = ["build-binary"]
+name = "json-schema-diff"
+path = "src/bin/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { version = "1.0.70", optional = true }
+clap = { version = "4.1.13", features = ["std", "derive"], default_features = false, optional = true }
+jsonref = "0.4.0"
+serde = "1.0.158"
+serde_json = "1.0.94"
+thiserror = "1.0.40"
+
+[features]
+build-binary = ["clap", "anyhow"]
+
+[dev-dependencies]
+insta = "1.29.0"
