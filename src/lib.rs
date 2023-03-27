@@ -1,52 +1,108 @@
-use std::collections::{BTreeSet, BTreeMap};
+#![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
+use std::collections::{BTreeMap, BTreeSet};
 
 use jsonref::JsonRef;
-use serde::{Deserializer, Deserialize, de::Error as _};
+use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
-#[derive(Debug, Eq, PartialEq)]
+/// An "atomic" change made to the JSON schema in question, going from LHS to RHS.
+///
+/// Just a wrapper container for `ChangeKind`
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct Change {
-    path: String,
-    change: ChangeInner,
+    /// JSON path for the given change. `""` for "root schema". `".foo"` for property foo.
+    pub path: String,
+    /// Data specific to the kind of change.
+    pub change: ChangeKind,
 }
 
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum ChangeInner {
-    TypeAdd { added: SimpleJsonSchemaType },
-    TypeRemove { removed: SimpleJsonSchemaType },
-    PropertyAdd { lhs_additional_properties: bool, added: String },
-    PropertyRemove { lhs_additional_properties: bool, removed: String },
+/// The kind of change + data relevant to the change.
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub enum ChangeKind {
+    /// A type has been added and is now additionally allowed.
+    TypeAdd {
+        /// The type in question.
+        added: SimpleJsonSchemaType,
+    },
+    /// A type has been removed and is no longer allowed.
+    TypeRemove {
+        /// The type in question.
+        removed: SimpleJsonSchemaType,
+    },
+    /// A property has been added and (depending on additionalProperties) is now additionally
+    /// allowed.
+    PropertyAdd {
+        /// The value of additionalProperties within the current JSON object.
+        lhs_additional_properties: bool,
+        /// The name of the added property.
+        added: String,
+    },
+    /// A property has been removed and (depending on additionalProperties) might now no longer be
+    /// allowed.
+    PropertyRemove {
+        /// The value of additionalProperties within the current JSON object.
+        lhs_additional_properties: bool,
+        /// The name of the added property.
+        removed: String,
+    },
 }
 
-impl ChangeInner {
+impl ChangeKind {
+    /// Whether the change is breaking.
+    ///
+    /// What is considered breaking is WIP. Changes are intentionally exposed as-is in public API
+    /// so that the user can develop their own logic as to what they consider breaking.
+    ///
+    /// Currently the rule of thumb is, a change is breaking if it would cause messages that used
+    /// to validate fine under RHS to no longer validate under LHS.
     pub fn is_breaking(&self) -> bool {
         match self {
             Self::TypeAdd { .. } => false,
             Self::TypeRemove { .. } => true,
-            Self::PropertyAdd { lhs_additional_properties, .. } => *lhs_additional_properties,
-            Self::PropertyRemove { lhs_additional_properties, .. } => *lhs_additional_properties,
+            Self::PropertyAdd {
+                lhs_additional_properties,
+                ..
+            } => *lhs_additional_properties,
+            Self::PropertyRemove {
+                lhs_additional_properties,
+                ..
+            } => *lhs_additional_properties,
         }
     }
 }
 
+/// The errors that can happen in this crate.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Failed to resolve references upfront.
+    ///
+    /// We invoke the `jsonref` crate upfront to flatten out the schema. Any errors during that
+    /// stage end up here.
     #[error("failed to find references")]
-    JsonRef(#[from] jsonref::Error),
+    JsonRef(#[from] Box<jsonref::Error>),
+
+    /// Failed to parse the JSON schema.
+    ///
+    /// Any deserialization errors from serde that happen while converting the value into our AST
+    /// end up here.
     #[error("failed to parse schema")]
     Serde(#[from] serde_json::Error),
 }
 
 #[derive(Deserialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
 #[serde(untagged)]
-pub enum JsonSchemaType {
+enum JsonSchemaType {
     Simple(SimpleJsonSchemaType),
+    Any,
+    Never,
     Multiple(Vec<SimpleJsonSchemaType>),
 }
 
-#[derive(Deserialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
+/// All primitive types defined in JSON schema.
+#[derive(Serialize, Deserialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
+#[allow(missing_docs)]
 pub enum SimpleJsonSchemaType {
     #[serde(rename = "string")]
     String,
@@ -62,20 +118,6 @@ pub enum SimpleJsonSchemaType {
     Boolean,
     #[serde(rename = "null")]
     Null,
-    #[serde(skip)]
-    Any,
-    #[serde(skip)]
-    Never,
-}
-
-impl SimpleJsonSchemaType {
-    fn explode(self) -> Vec<Self> {
-        match self {
-            Self::Number => vec![Self::Integer, Self::Number],
-            Self::Any => vec![Self::String, Self::Number, Self::Integer, Self::Object, Self::Array, Self::Boolean, Self::Null],
-            x => vec![x],
-        }
-    }
 }
 
 impl From<SimpleJsonSchemaType> for JsonSchemaType {
@@ -85,20 +127,34 @@ impl From<SimpleJsonSchemaType> for JsonSchemaType {
 }
 
 impl JsonSchemaType {
-    fn as_set(self) -> BTreeSet<SimpleJsonSchemaType> {
+    fn into_set(self) -> BTreeSet<SimpleJsonSchemaType> {
+        self.explode().into_iter().collect()
+    }
+
+    fn explode(self) -> Vec<SimpleJsonSchemaType> {
         match self {
-            JsonSchemaType::Multiple(v) => v
+            Self::Simple(SimpleJsonSchemaType::Number) => {
+                vec![SimpleJsonSchemaType::Integer, SimpleJsonSchemaType::Number]
+            }
+            Self::Any => vec![
+                SimpleJsonSchemaType::String,
+                SimpleJsonSchemaType::Number,
+                SimpleJsonSchemaType::Integer,
+                SimpleJsonSchemaType::Object,
+                SimpleJsonSchemaType::Array,
+                SimpleJsonSchemaType::Boolean,
+                SimpleJsonSchemaType::Null,
+            ],
+            Self::Never => vec![],
+            Self::Simple(x) => vec![x],
+            Self::Multiple(xs) => xs
                 .into_iter()
-                .flat_map(SimpleJsonSchemaType::explode)
-                .collect(),
-            JsonSchemaType::Simple(x) => vec![x]
-                .into_iter()
-                .flat_map(SimpleJsonSchemaType::explode)
+                .map(JsonSchemaType::from)
+                .flat_map(Self::explode)
                 .collect(),
         }
     }
 }
-
 
 #[derive(Default, Eq, PartialEq)]
 struct JsonSchema {
@@ -114,26 +170,26 @@ impl JsonSchema {
     }
 }
 
-
 impl<'de> Deserialize<'de> for JsonSchema {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-
         // perhaps catch this error as well, if needed
         let value = Value::deserialize(deserializer)?;
         if let Value::Bool(boolean) = value {
             if boolean {
                 Ok(JsonSchema {
-                    ty: Some(SimpleJsonSchemaType::Any.into()),
+                    ty: Some(JsonSchemaType::Any),
                     ..Default::default()
                 })
             } else {
                 Ok(JsonSchema {
-                    ty: Some(SimpleJsonSchemaType::Never.into()),
+                    ty: Some(JsonSchemaType::Never),
                     ..Default::default()
                 })
             }
         } else {
-            Ok(JsonSchemaRaw::deserialize(value).map_err(D::Error::custom)?.into())
+            Ok(JsonSchemaRaw::deserialize(value)
+                .map_err(D::Error::custom)?
+                .into())
         }
     }
 }
@@ -141,7 +197,7 @@ impl<'de> Deserialize<'de> for JsonSchema {
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-struct JsonSchemaRaw{
+struct JsonSchemaRaw {
     #[serde(rename = "type")]
     ty: Option<JsonSchemaType>,
     #[serde(rename = "const")]
@@ -152,9 +208,17 @@ struct JsonSchemaRaw{
 
 impl From<JsonSchemaRaw> for JsonSchema {
     fn from(raw: JsonSchemaRaw) -> Self {
-        let JsonSchemaRaw { ty, constant, additional_properties, properties } = raw;
+        let JsonSchemaRaw {
+            ty,
+            constant,
+            additional_properties,
+            properties,
+        } = raw;
         JsonSchema {
-            ty, constant, additional_properties, properties
+            ty,
+            constant,
+            additional_properties,
+            properties,
         }
     }
 }
@@ -168,7 +232,7 @@ impl JsonSchema {
         } else if !self.properties.is_empty() {
             SimpleJsonSchemaType::Object.into()
         } else {
-            SimpleJsonSchemaType::Any.into()
+            JsonSchemaType::Any
         }
     }
 }
@@ -183,14 +247,16 @@ impl From<&Value> for SimpleJsonSchemaType {
             Value::Array(_) => SimpleJsonSchemaType::Array,
             Value::Object(_) => SimpleJsonSchemaType::Object,
         }
-        .into()
     }
 }
 
+/// Take two JSON schemas, and compare them.
+///
+/// `lhs` (left-hand side) is the old schema, `rhs` (right-hand side) is the new schema.
 pub fn diff(mut lhs: Value, mut rhs: Value) -> Result<Vec<Change>, Error> {
     let mut jsonref = JsonRef::new();
-    jsonref.deref_value(&mut lhs)?;
-    jsonref.deref_value(&mut rhs)?;
+    jsonref.deref_value(&mut lhs).map_err(Box::new)?;
+    jsonref.deref_value(&mut rhs).map_err(Box::new)?;
     let mut rv = Vec::new();
 
     let json_path = String::new();
@@ -209,14 +275,14 @@ fn diff_inner(
     lhs: &JsonSchema,
     rhs: &JsonSchema,
 ) -> Result<(), Error> {
-    let lhs_ty = lhs.effective_type().as_set();
-    let rhs_ty = rhs.effective_type().as_set();
+    let lhs_ty = lhs.effective_type().into_set();
+    let rhs_ty = rhs.effective_type().into_set();
 
     for removed in lhs_ty.difference(&rhs_ty) {
         rv.push(Change {
             path: json_path.clone(),
-            change: ChangeInner::TypeRemove {
-                removed: removed.clone().into(),
+            change: ChangeKind::TypeRemove {
+                removed: removed.clone(),
             },
         });
     }
@@ -224,8 +290,8 @@ fn diff_inner(
     for added in rhs_ty.difference(&lhs_ty) {
         rv.push(Change {
             path: json_path.clone(),
-            change: ChangeInner::TypeAdd {
-                added: added.clone().into(),
+            change: ChangeKind::TypeAdd {
+                added: added.clone(),
             },
         });
     }
@@ -236,20 +302,26 @@ fn diff_inner(
     for &removed in lhs_props.difference(&rhs_props) {
         rv.push(Change {
             path: json_path.clone(),
-            change: ChangeInner::PropertyRemove {
-                lhs_additional_properties: lhs.additional_properties.as_deref().map_or(true, JsonSchema::is_true),
+            change: ChangeKind::PropertyRemove {
+                lhs_additional_properties: lhs
+                    .additional_properties
+                    .as_deref()
+                    .map_or(true, JsonSchema::is_true),
                 removed: removed.to_owned(),
-            }
+            },
         });
     }
 
     for &added in rhs_props.difference(&lhs_props) {
         rv.push(Change {
             path: json_path.clone(),
-            change: ChangeInner::PropertyAdd {
-                lhs_additional_properties: lhs.additional_properties.as_deref().map_or(true, JsonSchema::is_true),
+            change: ChangeKind::PropertyAdd {
+                lhs_additional_properties: lhs
+                    .additional_properties
+                    .as_deref()
+                    .map_or(true, JsonSchema::is_true),
                 added: added.to_owned(),
-            }
+            },
         });
     }
 
@@ -259,17 +331,24 @@ fn diff_inner(
 
         let mut new_path = json_path.clone();
         new_path.push('.');
-        new_path.push_str(&common);
+        new_path.push_str(common);
 
-        diff_inner(rv, new_path, &lhs_child, &rhs_child)?;
+        diff_inner(rv, new_path, lhs_child, rhs_child)?;
     }
 
-    if let (Some(ref lhs_additional_properties), Some(ref rhs_additional_properties)) = (&lhs.additional_properties, &rhs.additional_properties) {
+    if let (Some(ref lhs_additional_properties), Some(ref rhs_additional_properties)) =
+        (&lhs.additional_properties, &rhs.additional_properties)
+    {
         if rhs_additional_properties != lhs_additional_properties {
-            let mut new_path = json_path.clone();
+            let mut new_path = json_path;
             new_path.push_str(".<additional properties>");
 
-            diff_inner(rv, new_path, &lhs_additional_properties, &rhs_additional_properties)?;
+            diff_inner(
+                rv,
+                new_path,
+                lhs_additional_properties,
+                rhs_additional_properties,
+            )?;
         }
     }
 
@@ -400,12 +479,6 @@ mod tests {
         [
             Change {
                 path: ".<additional properties>",
-                change: TypeRemove {
-                    removed: Never,
-                },
-            },
-            Change {
-                path: ".<additional properties>",
                 change: TypeAdd {
                     added: String,
                 },
@@ -504,12 +577,6 @@ mod tests {
                     removed: Null,
                 },
             },
-            Change {
-                path: ".<additional properties>",
-                change: TypeAdd {
-                    added: Never,
-                },
-            },
         ]
         "###
         );
@@ -592,7 +659,6 @@ mod tests {
         "###
         );
     }
-
 
     #[test]
     fn remove_property() {

@@ -2,7 +2,6 @@ use clap::Parser;
 use std::fs::File;
 use std::path::PathBuf;
 
-
 use anyhow::Error;
 
 /// Compare old and new schema, and print differences
@@ -24,7 +23,7 @@ fn main() -> Result<(), Error> {
     let changes = json_schema_diff::diff(lhs, rhs)?;
 
     for change in changes {
-        println!("{:?}", change);
+        println!("{}", serde_json::to_string(&change)?);
     }
     Ok(())
 }
