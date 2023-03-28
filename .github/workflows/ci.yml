@@ -49,8 +49,6 @@ jobs:
           profile: minimal
           override: true
 
-      - uses: Swatinem/rust-cache@v1
-
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
