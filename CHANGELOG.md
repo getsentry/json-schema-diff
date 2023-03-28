@@ -1,4 +1,11 @@
 # Changelog and versioning
+## 0.1.1
+
+### Various fixes & improvements
+
+- fix formatting (e2f76cf0) by @untitaker
+- serialize is_breaking into output on CLI (249fee74) by @untitaker
+
 ## 0.1.0
 
 ### Various fixes & improvements
