@@ -1,0 +1,10 @@
+minVersion: 0.34.1
+github:
+  owner: getsentry
+  repo: json-schema-diff
+changelogPolicy: auto
+artifactProvider:
+  name: none
+targets:
+  - name: crates
+  - name: github
