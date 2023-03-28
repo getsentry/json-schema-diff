@@ -1,6 +1,6 @@
 # json-schema-diff
 
-A work-in-progress tool to diff changes between code schemas. A lot of JSON schema features are not implemented and therefore ignored, such as:
+A work-in-progress tool to diff changes between JSON schemas. A lot of JSON schema features are not implemented and therefore ignored, such as:
 
 * `required`
 * `patternProperties` (entirely ignored)

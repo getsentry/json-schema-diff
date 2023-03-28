@@ -3,6 +3,7 @@ name = "json-schema-diff"
 version = "0.1.0"
 edition = "2021"
 license = "Apache 2.0"
+description = "Diff changes between JSON schema files."
 
 [lib]
 name = "json_schema_diff"
