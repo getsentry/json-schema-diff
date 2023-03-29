@@ -68,7 +68,7 @@ impl ChangeKind {
             Self::PropertyRemove {
                 lhs_additional_properties,
                 ..
-            } => *lhs_additional_properties,
+            } => !*lhs_additional_properties,
         }
     }
 }
