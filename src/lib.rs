@@ -47,6 +47,34 @@ pub enum ChangeKind {
         /// The name of the added property.
         removed: String,
     },
+    /// An array-type item has been changed from tuple validation to array validation.
+    ///
+    /// See https://json-schema.org/understanding-json-schema/reference/array.html
+    ///
+    /// Changes will still be emitted for inner items.
+    TupleToArray {
+        /// The length of the (old) tuple
+        old_length: usize,
+    },
+    /// An array-type item has been changed from array validation to tuple validation.
+    ///
+    /// See https://json-schema.org/understanding-json-schema/reference/array.html
+    ///
+    /// Changes will still be emitted for inner items.
+    ArrayToTuple {
+        /// The length of the (new) tuple
+        new_length: usize,
+    },
+    /// An array-type item with tuple validation has changed its length ("items" array got longer
+    /// or shorter.
+    ///
+    /// See https://json-schema.org/understanding-json-schema/reference/array.html
+    ///
+    /// Changes will still be emitted for inner items.
+    TupleChange {
+        /// The new length of the tuple
+        new_length: usize,
+    },
 }
 
 impl ChangeKind {
@@ -69,6 +97,9 @@ impl ChangeKind {
                 lhs_additional_properties,
                 ..
             } => !*lhs_additional_properties,
+            Self::TupleToArray { .. } => false,
+            Self::ArrayToTuple { .. } => true,
+            Self::TupleChange { .. } => true,
         }
     }
 }
@@ -156,12 +187,14 @@ impl JsonSchemaType {
     }
 }
 
-#[derive(Default, Eq, PartialEq)]
+#[derive(Default, Eq, PartialEq, Debug)]
 struct JsonSchema {
     ty: Option<JsonSchemaType>,
     constant: Option<Value>,
     additional_properties: Option<Box<JsonSchema>>,
     properties: BTreeMap<String, JsonSchema>,
+    any_of: Vec<JsonSchema>,
+    items: Option<JsonSchemaItems>,
 }
 
 impl JsonSchema {
@@ -194,8 +227,16 @@ impl<'de> Deserialize<'de> for JsonSchema {
     }
 }
 
+#[derive(Deserialize, Eq, PartialEq, Debug)]
+#[serde(untagged)]
+enum JsonSchemaItems {
+    ExactItems(Vec<JsonSchema>),
+    Items(Box<JsonSchema>),
+}
+
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(test, serde(deny_unknown_fields))]
 #[serde(default)]
 struct JsonSchemaRaw {
     #[serde(rename = "type")]
@@ -204,6 +245,8 @@ struct JsonSchemaRaw {
     constant: Option<Value>,
     additional_properties: Option<Box<JsonSchema>>,
     properties: BTreeMap<String, JsonSchema>,
+    any_of: Vec<JsonSchema>,
+    items: Option<JsonSchemaItems>,
 }
 
 impl From<JsonSchemaRaw> for JsonSchema {
@@ -213,12 +256,16 @@ impl From<JsonSchemaRaw> for JsonSchema {
             constant,
             additional_properties,
             properties,
+            any_of,
+            items,
         } = raw;
         JsonSchema {
             ty,
             constant,
             additional_properties,
             properties,
+            any_of,
+            items,
         }
     }
 }
@@ -275,6 +322,18 @@ fn diff_inner(
     lhs: &JsonSchema,
     rhs: &JsonSchema,
 ) -> Result<(), Error> {
+    #[cfg(test)]
+    {
+        dbg!(&json_path);
+        dbg!(&rhs);
+        dbg!(&lhs);
+    }
+
+    for (i, (lhs_inner, rhs_inner)) in lhs.any_of.iter().zip(rhs.any_of.iter()).enumerate() {
+        let new_path = format!("{json_path}.<anyOf:{i}>");
+        diff_inner(rv, new_path, lhs_inner, rhs_inner)?;
+    }
+
     let lhs_ty = lhs.effective_type().into_set();
     let rhs_ty = rhs.effective_type().into_set();
 
@@ -329,10 +388,7 @@ fn diff_inner(
         let lhs_child = lhs.properties.get(common.as_str()).unwrap();
         let rhs_child = rhs.properties.get(common.as_str()).unwrap();
 
-        let mut new_path = json_path.clone();
-        new_path.push('.');
-        new_path.push_str(common);
-
+        let new_path = format!("{json_path}.{common}");
         diff_inner(rv, new_path, lhs_child, rhs_child)?;
     }
 
@@ -340,8 +396,7 @@ fn diff_inner(
         (&lhs.additional_properties, &rhs.additional_properties)
     {
         if rhs_additional_properties != lhs_additional_properties {
-            let mut new_path = json_path;
-            new_path.push_str(".<additional properties>");
+            let new_path = format!("{json_path}.<additionalProperties>");
 
             diff_inner(
                 rv,
@@ -349,6 +404,62 @@ fn diff_inner(
                 lhs_additional_properties,
                 rhs_additional_properties,
             )?;
+        }
+    }
+
+    match (&lhs.items, &rhs.items) {
+        (
+            Some(JsonSchemaItems::ExactItems(lhs_items)),
+            Some(JsonSchemaItems::ExactItems(rhs_items)),
+        ) => {
+            if lhs_items.len() != rhs_items.len() {
+                rv.push(Change {
+                    path: json_path.clone(),
+                    change: ChangeKind::TupleChange {
+                        new_length: rhs_items.len(),
+                    },
+                });
+            }
+
+            for (i, (lhs_inner, rhs_inner)) in lhs_items.iter().zip(rhs_items.iter()).enumerate() {
+                let new_path = format!("{json_path}.{i}");
+                diff_inner(rv, new_path, lhs_inner, rhs_inner)?;
+            }
+        }
+        (Some(JsonSchemaItems::Items(lhs_inner)), Some(JsonSchemaItems::Items(rhs_inner))) => {
+            let new_path = format!("{json_path}.?");
+            diff_inner(rv, new_path, lhs_inner, rhs_inner)?;
+        }
+        (Some(JsonSchemaItems::Items(lhs_inner)), Some(JsonSchemaItems::ExactItems(rhs_items))) => {
+            rv.push(Change {
+                path: json_path.clone(),
+                change: ChangeKind::ArrayToTuple {
+                    new_length: rhs_items.len(),
+                },
+            });
+
+            for (i, rhs_inner) in rhs_items.iter().enumerate() {
+                let new_path = format!("{json_path}.{i}");
+                diff_inner(rv, new_path, lhs_inner, rhs_inner)?;
+            }
+        }
+        (Some(JsonSchemaItems::ExactItems(lhs_items)), Some(JsonSchemaItems::Items(rhs_inner))) => {
+            rv.push(Change {
+                path: json_path.clone(),
+                change: ChangeKind::TupleToArray {
+                    old_length: lhs_items.len(),
+                },
+            });
+
+            for (i, lhs_inner) in lhs_items.iter().enumerate() {
+                let new_path = format!("{json_path}.{i}");
+                diff_inner(rv, new_path, lhs_inner, rhs_inner)?;
+            }
+        }
+        (None, None) => (),
+        _ => {
+            #[cfg(test)]
+            todo!("{:?} {:?}", lhs.items, rhs.items)
         }
     }
 
@@ -478,43 +589,43 @@ mod tests {
             @r###"
         [
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: String,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: Number,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: Integer,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: Object,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: Array,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: Boolean,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeAdd {
                     added: Null,
                 },
@@ -536,43 +647,43 @@ mod tests {
             @r###"
         [
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: String,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: Number,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: Integer,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: Object,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: Array,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: Boolean,
                 },
             },
             Change {
-                path: ".<additional properties>",
+                path: ".<additionalProperties>",
                 change: TypeRemove {
                     removed: Null,
                 },
@@ -736,5 +847,48 @@ mod tests {
         ]
         "###
         );
+    }
+
+    #[test]
+    fn add_property_in_array_of_anyof() {
+        // rough shape of a sentry eventstream message
+        // https://github.com/getsentry/sentry-kafka-schemas/pull/79/files
+        let lhs = json! {{
+            "anyOf": [
+                {
+                    "type": "array",
+                    "items": [
+                        {"const": "start_unmerge"},
+                        {"type": "object"}
+                    ]
+                }
+            ]
+        }};
+
+        let rhs = json! {{
+            "anyOf": [
+                {
+                    "type": "array",
+                    "items": [
+                        {"const": "start_unmerge"},
+                        {"type": "object", "properties": {"transaction_id": {"type": "string"}}}
+                    ]
+                }
+            ]
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(diff, @r###"
+        [
+            Change {
+                path: ".<anyOf:0>.1",
+                change: PropertyAdd {
+                    lhs_additional_properties: true,
+                    added: "transaction_id",
+                },
+            },
+        ]
+        "###);
     }
 }
