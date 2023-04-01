@@ -5,6 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 description = "Diff changes between JSON schema files."
 repository = "https://github.com/getsentry/json-schema-diff"
+authors = ["Sentry <oss@sentry.io>"]
 
 [lib]
 name = "json_schema_diff"

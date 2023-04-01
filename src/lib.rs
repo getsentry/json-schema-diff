@@ -891,4 +891,41 @@ mod tests {
         ]
         "###);
     }
+
+    #[test]
+    #[ignore]
+    fn add_property_in_array() {
+        let lhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "object",
+                }
+            }
+        }};
+
+        let rhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "object",
+                    "properties": {"transaction_id": {"type": "string"}}
+                }
+            }
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        // TODO: buggy wrt array references. suggest to get rid of jsonref crate dependency, and
+        // rewrite crate on top of schemars::schema::Schema
+        assert_debug_snapshot!(diff, @"");
+    }
 }
