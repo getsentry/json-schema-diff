@@ -47,4 +47,4 @@ assert_eq!(
 
 ## License
 
-Licensed under Apache 2.0, see `./LICENSE`
+Licensed under Apache 2.0

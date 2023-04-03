@@ -369,9 +369,7 @@ fn diff_inner(
         rv.push(Change {
             path: json_path.clone(),
             change: ChangeKind::PropertyRemove {
-                lhs_additional_properties: lhs
-                    .additional_properties
-                    .is_true(),
+                lhs_additional_properties: lhs.additional_properties.is_true(),
                 removed: removed.to_owned(),
             },
         });
@@ -381,9 +379,7 @@ fn diff_inner(
         rv.push(Change {
             path: json_path.clone(),
             change: ChangeKind::PropertyAdd {
-                lhs_additional_properties: lhs
-                    .additional_properties
-                    .is_true(),
+                lhs_additional_properties: lhs.additional_properties.is_true(),
                 added: added.to_owned(),
             },
         });
@@ -924,5 +920,42 @@ mod tests {
             },
         ]
         "###);
+    }
+
+    #[test]
+    #[ignore]
+    fn add_property_in_array() {
+        let lhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "object",
+                }
+            }
+        }};
+
+        let rhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "object",
+                    "properties": {"transaction_id": {"type": "string"}}
+                }
+            }
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        // TODO: buggy wrt array references. suggest to get rid of jsonref crate dependency, and
+        // rewrite crate on top of schemars::schema::Schema
+        assert_debug_snapshot!(diff, @"");
     }
 }
