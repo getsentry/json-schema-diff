@@ -187,7 +187,7 @@ impl JsonSchemaType {
     }
 }
 
-#[derive(Default, Eq, PartialEq, Debug)]
+#[derive(Default, Eq, PartialEq, Debug, Clone)]
 struct JsonSchema {
     ty: Option<JsonSchemaType>,
     constant: Option<Value>,
@@ -197,9 +197,19 @@ struct JsonSchema {
     items: Option<JsonSchemaItems>,
 }
 
-impl JsonSchema {
+trait JsonSchemaExt {
+    fn is_true(&self) -> bool;
+}
+
+impl JsonSchemaExt for JsonSchema {
     fn is_true(&self) -> bool {
         *self == JsonSchema::default()
+    }
+}
+
+impl JsonSchemaExt for Option<Box<JsonSchema>> {
+    fn is_true(&self) -> bool {
+        self.as_deref().map_or(true, JsonSchema::is_true)
     }
 }
 
@@ -209,10 +219,7 @@ impl<'de> Deserialize<'de> for JsonSchema {
         let value = Value::deserialize(deserializer)?;
         if let Value::Bool(boolean) = value {
             if boolean {
-                Ok(JsonSchema {
-                    ty: Some(JsonSchemaType::Any),
-                    ..Default::default()
-                })
+                Ok(JsonSchema::default())
             } else {
                 Ok(JsonSchema {
                     ty: Some(JsonSchemaType::Never),
@@ -227,7 +234,7 @@ impl<'de> Deserialize<'de> for JsonSchema {
     }
 }
 
-#[derive(Deserialize, Eq, PartialEq, Debug)]
+#[derive(Deserialize, Eq, PartialEq, Debug, Clone)]
 #[serde(untagged)]
 enum JsonSchemaItems {
     ExactItems(Vec<JsonSchema>),
@@ -362,10 +369,7 @@ fn diff_inner(
         rv.push(Change {
             path: json_path.clone(),
             change: ChangeKind::PropertyRemove {
-                lhs_additional_properties: lhs
-                    .additional_properties
-                    .as_deref()
-                    .map_or(true, JsonSchema::is_true),
+                lhs_additional_properties: lhs.additional_properties.is_true(),
                 removed: removed.to_owned(),
             },
         });
@@ -375,10 +379,7 @@ fn diff_inner(
         rv.push(Change {
             path: json_path.clone(),
             change: ChangeKind::PropertyAdd {
-                lhs_additional_properties: lhs
-                    .additional_properties
-                    .as_deref()
-                    .map_or(true, JsonSchema::is_true),
+                lhs_additional_properties: lhs.additional_properties.is_true(),
                 added: added.to_owned(),
             },
         });
@@ -886,6 +887,35 @@ mod tests {
                 change: PropertyAdd {
                     lhs_additional_properties: true,
                     added: "transaction_id",
+                },
+            },
+        ]
+        "###);
+    }
+
+    #[test]
+    fn remove_property_while_allowing_additional_properties() {
+        let lhs = json! {{
+            "type": "object",
+            "properties": {
+                "foobar": {"type": "string"}
+            },
+            "additionalProperties": true
+        }};
+
+        let rhs = json! {{
+            "type": "object",
+            "additionalProperties": true
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+        assert_debug_snapshot!(diff, @r###"
+        [
+            Change {
+                path: "",
+                change: PropertyRemove {
+                    lhs_additional_properties: true,
+                    removed: "foobar",
                 },
             },
         ]
