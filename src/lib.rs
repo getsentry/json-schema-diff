@@ -336,7 +336,14 @@ fn diff_inner(
         dbg!(&lhs);
     }
 
-    for (i, (lhs_inner, rhs_inner)) in lhs.any_of.iter().zip(rhs.any_of.iter()).enumerate() {
+    // hack to get a stable order for anyOf. serde_json::Value does not impl Hash or Ord, so we
+    // can't use a set.
+    let mut lhs_any_of = lhs.any_of.clone();
+    let mut rhs_any_of = rhs.any_of.clone();
+    lhs_any_of.sort_by_cached_key(|x| format!("{:?}", x));
+    rhs_any_of.sort_by_cached_key(|x| format!("{:?}", x));
+
+    for (i, (lhs_inner, rhs_inner)) in lhs_any_of.iter().zip(rhs_any_of.iter()).enumerate() {
         let new_path = format!("{json_path}.<anyOf:{i}>");
         diff_inner(rv, new_path, lhs_inner, rhs_inner)?;
     }
@@ -957,5 +964,26 @@ mod tests {
         // TODO: buggy wrt array references. suggest to get rid of jsonref crate dependency, and
         // rewrite crate on top of schemars::schema::Schema
         assert_debug_snapshot!(diff, @"");
+    }
+
+    #[test]
+    fn any_of_order_change() {
+        let lhs = json! {{
+            "anyOf": [
+                {"type": "array"},
+                {"type": "string"},
+            ]
+        }};
+
+        let rhs = json! {{
+            "anyOf": [
+                {"type": "string"},
+                {"type": "array"},
+            ]
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(diff, @"[]");
     }
 }
