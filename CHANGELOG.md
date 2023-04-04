@@ -1,4 +1,13 @@
 # Changelog and versioning
+## 0.1.3
+
+### Various fixes & improvements
+
+- fix: anyOf is not order-sensitive (#9) by @untitaker
+- fix: Fix bug where additionalProperties was not true in changeset (#7) by @untitaker
+- fix: Add another failing test and fix licensing metadata (#8) by @untitaker
+- fix: Implement rudimentary support for anyOf and array items (#6) by @untitaker
+
 ## 0.1.2
 
 ### Various fixes & improvements
