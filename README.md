@@ -35,11 +35,11 @@ assert_eq!(
     vec![
         Change {
             path: "".to_owned(),
-            change: ChangeKind::TypeRemove { removed: SimpleJsonSchemaType::String }
+            change: ChangeKind::TypeRemove { removed: JsonSchemaType::String }
         },
         Change {
             path: "".to_owned(),
-            change: ChangeKind::TypeAdd { added: SimpleJsonSchemaType::Boolean }
+            change: ChangeKind::TypeAdd { added: JsonSchemaType::Boolean }
         }
     ]
 );
