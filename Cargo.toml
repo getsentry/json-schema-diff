@@ -21,7 +21,7 @@ path = "src/bin/main.rs"
 [dependencies]
 anyhow = { version = "1.0.70", optional = true }
 clap = { version = "4.1.13", features = ["std", "derive"], default_features = false, optional = true }
-jsonref = "0.4.0"
+schemars = "0.8.12"
 serde = "1.0.158"
 serde_json = "1.0.94"
 thiserror = "1.0.40"
