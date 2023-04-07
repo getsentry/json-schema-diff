@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use schemars::schema::{InstanceType, RootSchema, SchemaObject, Schema, SingleOrVec};
+use schemars::schema::{InstanceType, RootSchema, Schema, SchemaObject, SingleOrVec};
 use serde_json::Value;
 
 use crate::{Change, ChangeKind, Error, JsonSchemaType};
@@ -233,7 +233,11 @@ impl DiffWalker {
         }
     }
 
-    fn resolve_references(&mut self, lhs: &mut SchemaObject, rhs: &mut SchemaObject) -> Result<(), Error> {
+    fn resolve_references(
+        &mut self,
+        lhs: &mut SchemaObject,
+        rhs: &mut SchemaObject,
+    ) -> Result<(), Error> {
         if let Some(ref reference) = lhs.reference {
             if let Some(lhs_inner) = Self::resolve_ref(&self.lhs_root, reference) {
                 *lhs = lhs_inner.clone().into_object();
