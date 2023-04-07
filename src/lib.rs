@@ -488,7 +488,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn add_property_in_array() {
         let lhs = json! {{
             "type": "array",
@@ -519,9 +518,68 @@ mod tests {
 
         let diff = diff(lhs, rhs).unwrap();
 
-        // TODO: buggy wrt array references. suggest to get rid of jsonref crate dependency, and
-        // rewrite crate on top of schemars::schema::Schema
-        assert_debug_snapshot!(diff, @"");
+        assert_debug_snapshot!(diff, @r###"
+        [
+            Change {
+                path: ".1",
+                change: PropertyAdd {
+                    lhs_additional_properties: true,
+                    added: "transaction_id",
+                },
+            },
+        ]
+        "###);
+    }
+
+    #[test]
+    fn factor_out_definitions() {
+        let lhs = json! {{
+            "type": "object"
+        }};
+
+        let rhs = json! {{
+            "$ref": "#/definitions/Hello",
+            "definitions": {
+                "Hello": {"type": "object"}
+            }
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(diff, @"[]");
+    }
+
+    #[test]
+    fn factor_out_definitions_and_change() {
+        let lhs = json! {{
+            "type": "object"
+        }};
+
+        let rhs = json! {{
+            "$ref": "#/definitions/Hello",
+            "definitions": {
+                "Hello": {"type": "array"}
+            }
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(diff, @r###"
+        [
+            Change {
+                path: "",
+                change: TypeRemove {
+                    removed: Object,
+                },
+            },
+            Change {
+                path: "",
+                change: TypeAdd {
+                    added: Array,
+                },
+            },
+        ]
+        "###);
     }
 
     #[test]
