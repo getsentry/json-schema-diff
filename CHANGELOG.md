@@ -1,4 +1,10 @@
 # Changelog and versioning
+## 0.1.4
+
+### Various fixes & improvements
+
+- ref: Rewrite the crate and add support for references (#10) by @untitaker
+
 ## 0.1.3
 
 ### Various fixes & improvements
