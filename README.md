@@ -13,10 +13,25 @@ This crate is used with draft-07 but even that is work in progress.
 ## Usage via CLI
 
 ```bash
+cat schema-old.json schema-new.json
+# {"type": "string"}
+# {"type": "boolean"}
+
 cargo run --features=build-binary -- \
     schema-old.json \
     schema-new.json
+# {"path":"","change":{"TypeRemove":{"removed":"string"}},"is_breaking":true}
+# {"path":"","change":{"TypeAdd":{"added":"boolean"}},"is_breaking":false}
 ```
+
+Sentry uses this tool in
+[`sentry-kafka-schemas`](https://github.com/getsentry/sentry-kafka-schemas) to
+annotate pull requests with breaking changes made to schema definitions. It
+invokes the CLI tool on the schema from master vs the schema in the PR, and
+post-processes the output using a Python script for human consumption.
+
+`is_breaking` is just a suggestion. You may choose to ignore it entirely and
+instead define which kinds of changes are breaking to you in wrapper scripts.
 
 ## Usage as library
 
