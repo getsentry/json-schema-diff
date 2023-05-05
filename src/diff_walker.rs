@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use schemars::schema::{InstanceType, RootSchema, Schema, SchemaObject, SingleOrVec};
 use serde_json::Value;
 
-use crate::{Change, ChangeKind, Error, JsonSchemaType};
+use crate::{Change, ChangeKind, Error, JsonSchemaType, Range};
 
 pub struct DiffWalker {
     pub changes: Vec<Change>,
@@ -143,6 +143,44 @@ impl DiffWalker {
         Ok(())
     }
 
+    fn diff_range(
+        &mut self,
+        json_path: &str,
+        lhs: &mut SchemaObject,
+        rhs: &mut SchemaObject,
+    ) -> Result<(), Error> {
+        let diff = |lhs, rhs, range| match (lhs, rhs) {
+            (None, Some(value)) => Some(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::RangeAdd {
+                    added: range,
+                    value,
+                },
+            }),
+            (Some(value), None) => Some(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::RangeRemove {
+                    removed: range,
+                    value,
+                },
+            }),
+            (Some(lhs), Some(rhs)) if lhs != rhs => Some(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::RangeChange {
+                    changed: range,
+                    old_value: lhs,
+                    new_value: rhs,
+                },
+            }),
+            _ => None,
+        };
+        diff(lhs.number().minimum, rhs.number().minimum, Range::Minimum)
+            .map(|diff| self.changes.push(diff));
+        diff(lhs.number().maximum, rhs.number().maximum, Range::Maximum)
+            .map(|diff| self.changes.push(diff));
+        Ok(())
+    }
+
     fn diff_array_items(
         &mut self,
         json_path: &str,
@@ -263,6 +301,7 @@ impl DiffWalker {
         self.diff_any_of(json_path, lhs, rhs)?;
         self.diff_instance_types(json_path, lhs, rhs);
         self.diff_properties(json_path, lhs, rhs)?;
+        self.diff_range(json_path, lhs, rhs)?;
         self.diff_additional_properties(json_path, lhs, rhs)?;
         self.diff_array_items(json_path, lhs, rhs)?;
         Ok(())
