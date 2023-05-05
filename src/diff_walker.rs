@@ -269,7 +269,7 @@ impl DiffWalker {
         let lhs_required = &lhs.object().required;
         let rhs_required = &rhs.object().required;
 
-        for removed in lhs_required.difference(&rhs_required) {
+        for removed in lhs_required.difference(rhs_required) {
             self.changes.push(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RequiredRemove {
@@ -278,7 +278,7 @@ impl DiffWalker {
             });
         }
 
-        for added in rhs_required.difference(&lhs_required) {
+        for added in rhs_required.difference(lhs_required) {
             self.changes.push(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RequiredAdd {
