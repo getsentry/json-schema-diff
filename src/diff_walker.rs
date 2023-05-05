@@ -260,6 +260,36 @@ impl DiffWalker {
         Ok(())
     }
 
+    fn diff_required(
+        &mut self,
+        json_path: &str,
+        lhs: &mut SchemaObject,
+        rhs: &mut SchemaObject,
+    ) -> Result<(), Error> {
+        let lhs_required = &lhs.object().required;
+        let rhs_required = &rhs.object().required;
+
+        for removed in lhs_required.difference(&rhs_required) {
+            self.changes.push(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::RequiredRemove {
+                    property: removed.clone(),
+                },
+            });
+        }
+
+        for added in rhs_required.difference(&lhs_required) {
+            self.changes.push(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::RequiredAdd {
+                    property: added.clone(),
+                },
+            });
+        }
+
+        Ok(())
+    }
+
     fn resolve_ref<'a>(root_schema: &'a RootSchema, reference: &str) -> Option<&'a Schema> {
         if let Some(definition_name) = reference.strip_prefix("#/definitions/") {
             let schema_object = root_schema.definitions.get(definition_name)?;
@@ -302,6 +332,7 @@ impl DiffWalker {
         self.diff_range(json_path, lhs, rhs)?;
         self.diff_additional_properties(json_path, lhs, rhs)?;
         self.diff_array_items(json_path, lhs, rhs)?;
+        self.diff_required(json_path, lhs, rhs)?;
         Ok(())
     }
 }

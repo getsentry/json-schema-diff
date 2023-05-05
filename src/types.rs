@@ -92,6 +92,16 @@ pub enum ChangeKind {
         /// The new length of the tuple
         new_length: usize,
     },
+    /// A previously required property has been removed
+    RequiredRemove {
+        /// The property that is no longer required
+        property: String,
+    },
+    /// A previously optional property has been made required
+    RequiredAdd {
+        /// The property that is now required
+        property: String,
+    },
 }
 
 impl ChangeKind {
@@ -128,6 +138,8 @@ impl ChangeKind {
             Self::TupleToArray { .. } => false,
             Self::ArrayToTuple { .. } => true,
             Self::TupleChange { .. } => true,
+            Self::RequiredRemove { .. } => false,
+            Self::RequiredAdd { .. } => true,
         }
     }
 }
