@@ -149,22 +149,22 @@ impl DiffWalker {
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        let diff = |lhs, rhs, range| match (lhs, rhs) {
-            (None, Some(value)) => Some(Change {
+        let mut diff = |lhs, rhs, range| match (lhs, rhs) {
+            (None, Some(value)) => self.changes.push(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RangeAdd {
                     added: range,
                     value,
                 },
             }),
-            (Some(value), None) => Some(Change {
+            (Some(value), None) => self.changes.push(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RangeRemove {
                     removed: range,
                     value,
                 },
             }),
-            (Some(lhs), Some(rhs)) if lhs != rhs => Some(Change {
+            (Some(lhs), Some(rhs)) if lhs != rhs => self.changes.push(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RangeChange {
                     changed: range,
@@ -172,12 +172,10 @@ impl DiffWalker {
                     new_value: rhs,
                 },
             }),
-            _ => None,
+            _ => (),
         };
-        diff(lhs.number().minimum, rhs.number().minimum, Range::Minimum)
-            .map(|diff| self.changes.push(diff));
-        diff(lhs.number().maximum, rhs.number().maximum, Range::Maximum)
-            .map(|diff| self.changes.push(diff));
+        diff(lhs.number().minimum, rhs.number().minimum, Range::Minimum);
+        diff(lhs.number().maximum, rhs.number().maximum, Range::Maximum);
         Ok(())
     }
 
