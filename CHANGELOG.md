@@ -1,4 +1,12 @@
 # Changelog and versioning
+## 0.1.5
+
+### Various fixes & improvements
+
+- support for minimum/maximum changes (#13) by @6293
+- doc: Make the purpose more clear in README (#12) by @untitaker
+- fix: Reenable help output for json-schema-diff (#11) by @untitaker
+
 ## 0.1.4
 
 ### Various fixes & improvements
