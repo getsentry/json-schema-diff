@@ -4,7 +4,7 @@ use thiserror::Error;
 /// An "atomic" change made to the JSON schema in question, going from LHS to RHS.
 ///
 /// Just a wrapper container for `ChangeKind`
-#[derive(Debug, Eq, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Change {
     /// JSON path for the given change. `""` for "root schema". `".foo"` for property foo.
     pub path: String,
@@ -13,7 +13,7 @@ pub struct Change {
 }
 
 /// The kind of change + data relevant to the change.
-#[derive(Debug, Eq, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum ChangeKind {
     /// A type has been added and is now additionally allowed.
     TypeAdd {
@@ -40,6 +40,29 @@ pub enum ChangeKind {
         lhs_additional_properties: bool,
         /// The name of the added property.
         removed: String,
+    },
+    /// A minimum/maximum constraint has been added.
+    RangeAdd {
+        /// The name of the added constraint.
+        added: Range,
+        /// The value of the added constraint.
+        value: f64,
+    },
+    /// A minimum/maximum constraint has been removed.
+    RangeRemove {
+        /// The name of the removed constraint.
+        removed: Range,
+        /// The value of the removed constraint.
+        value: f64,
+    },
+    /// A minimum/maximum constraint has been updated.
+    RangeChange {
+        /// The name of the changed constraint.
+        changed: Range,
+        /// The old constraint value.
+        old_value: f64,
+        /// The new constraint value.
+        new_value: f64,
     },
     /// An array-type item has been changed from tuple validation to array validation.
     ///
@@ -91,6 +114,17 @@ impl ChangeKind {
                 lhs_additional_properties,
                 ..
             } => !*lhs_additional_properties,
+            Self::RangeAdd { .. } => true,
+            Self::RangeRemove { .. } => false,
+            Self::RangeChange {
+                changed,
+                old_value: lhs_value,
+                new_value: rhs_value,
+            } => match changed {
+                Range::Minimum if lhs_value < rhs_value => true,
+                Range::Maximum if lhs_value > rhs_value => true,
+                _ => false,
+            },
             Self::TupleToArray { .. } => false,
             Self::ArrayToTuple { .. } => true,
             Self::TupleChange { .. } => true,
@@ -127,4 +161,14 @@ pub enum JsonSchemaType {
     Boolean,
     #[serde(rename = "null")]
     Null,
+}
+
+/// Range constraints in JSON schema.
+#[derive(Serialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
+#[allow(missing_docs)]
+pub enum Range {
+    #[serde(rename = "minimum")]
+    Minimum,
+    #[serde(rename = "maximum")]
+    Maximum,
 }

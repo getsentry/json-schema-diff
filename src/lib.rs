@@ -602,4 +602,279 @@ mod tests {
 
         assert_debug_snapshot!(diff, @"[]");
     }
+
+    #[test]
+    fn add_minimum() {
+        let lhs = json! {{
+            "type": "number",
+        }};
+        let rhs = json! {{
+            "type": "number",
+            "minimum": 1.0
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeAdd {
+                    added: Minimum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn add_minimum_in_array() {
+        let lhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "number",
+                }
+            }
+        }};
+
+        let rhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "number",
+                    "minimum": 1.0
+                }
+            }
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(diff, @r###"
+        [
+            Change {
+                path: ".1",
+                change: RangeAdd {
+                    added: Minimum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###);
+    }
+
+    #[test]
+    fn add_maximum() {
+        let lhs = json! {{
+            "type": "number",
+        }};
+        let rhs = json! {{
+            "type": "number",
+            "maximum": 1.0
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeAdd {
+                    added: Maximum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn remove_minimum() {
+        let lhs = json! {{
+            "type": "number",
+            "minimum": 1.0
+        }};
+        let rhs = json! {{
+            "type": "number",
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeRemove {
+                    removed: Minimum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn remove_maximum() {
+        let lhs = json! {{
+            "type": "number",
+            "maximum": 1.0
+        }};
+        let rhs = json! {{
+            "type": "number",
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeRemove {
+                    removed: Maximum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn change_minimum() {
+        let lhs = json! {{
+            "type": "number",
+            "minimum": 1.0
+        }};
+        let rhs = json! {{
+            "type": "number",
+            "minimum": 1.3
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeChange {
+                    changed: Minimum,
+                    old_value: 1.0,
+                    new_value: 1.3,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn change_maximum() {
+        let lhs = json! {{
+            "type": "number",
+            "maximum": 1.0
+        }};
+        let rhs = json! {{
+            "type": "number",
+            "maximum": 1.3
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeChange {
+                    changed: Maximum,
+                    old_value: 1.0,
+                    new_value: 1.3,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn change_minimum_and_maximum() {
+        let lhs = json! {{
+            "type": "number",
+            "minimum": 1.0,
+            "maximum": 2.0,
+        }};
+        let rhs = json! {{
+            "type": "number",
+            "minimum": 1.5,
+            "maximum": 2.5,
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeChange {
+                    changed: Minimum,
+                    old_value: 1.0,
+                    new_value: 1.5,
+                },
+            },
+            Change {
+                path: "",
+                change: RangeChange {
+                    changed: Maximum,
+                    old_value: 2.0,
+                    new_value: 2.5,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn unchanged_minimum() {
+        let lhs = json! {{
+            "type": "number",
+            "minimum": 1.3
+        }};
+        let rhs = json! {{
+            "type": "number",
+            "minimum": 1.3
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @"[]"
+        );
+    }
 }
