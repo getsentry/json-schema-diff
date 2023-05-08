@@ -877,4 +877,55 @@ mod tests {
             @"[]"
         );
     }
+
+    #[test]
+    fn drop_required() {
+        let lhs = json! {{
+            "required": ["value"]
+        }};
+        let rhs = json! {{
+            "required": [],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RequiredRemove {
+                    property: "value",
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn add_required() {
+        let lhs = json! {{
+            "required": []
+        }};
+        let rhs = json! {{
+            "required": ["value"],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RequiredAdd {
+                    property: "value",
+                },
+            },
+        ]
+        "###
+        );
+    }
 }
