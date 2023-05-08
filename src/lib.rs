@@ -928,4 +928,254 @@ mod tests {
         "###
         );
     }
+
+    #[test]
+    fn any_of_to_equivalent_type() {
+        let lhs = json! {{
+            "anyOf": [{"type": "string"}],
+        }};
+        let rhs = json! {{
+            "type": "string",
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @"[]"
+        );
+    }
+
+    #[test]
+    fn any_of_to_less_strict_type() {
+        let lhs = json! {{
+            "anyOf": [{"type": "integer"}, {"type": "string"}],
+        }};
+        let rhs = json! {{
+            "type": "string",
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: TypeRemove {
+                    removed: Integer,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn any_of_to_more_strict_type() {
+        let lhs = json! {{
+            "anyOf": [{"type": "integer"}],
+        }};
+        let rhs = json! {{
+            "type": ["integer", "string"],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: TypeAdd {
+                    added: String,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn any_of_with_constraint_to_type_1() {
+        let lhs = json! {{
+            "anyOf": [{"type": "integer", "minimum": 1}],
+        }};
+        let rhs = json! {{
+            "type": ["integer", "string"],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeRemove {
+                    removed: Minimum,
+                    value: 1.0,
+                },
+            },
+            Change {
+                path: "",
+                change: TypeAdd {
+                    added: String,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn any_of_with_constraint_to_type_2() {
+        let lhs = json! {{
+            "anyOf": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 2}],
+        }};
+        let rhs = json! {{
+            "type": ["integer", "string"],
+            "minimum": 1,
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeRemove {
+                    removed: Minimum,
+                    value: 2.0,
+                },
+            },
+            Change {
+                path: "",
+                change: TypeAdd {
+                    added: String,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn type_to_equivalent_any_of() {
+        let lhs = json! {{
+            "type": "integer",
+        }};
+        let rhs = json! {{
+            "anyOf": [{"type": "integer"}],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @"[]"
+        );
+    }
+
+    #[test]
+    fn type_to_more_strict_any_of() {
+        let lhs = json! {{
+            "type": "integer",
+        }};
+        let rhs = json! {{
+            "anyOf": [{"type": "integer"}, {"type": "string"}],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: TypeAdd {
+                    added: String,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn type_to_less_strict_any_of() {
+        let lhs = json! {{
+            "type": "integer",
+            "minimum": 1.0
+        }};
+        let rhs = json! {{
+            "anyOf": [{"type": "integer"}],
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(
+            diff,
+            @r###"
+        [
+            Change {
+                path: "",
+                change: RangeRemove {
+                    removed: Minimum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###
+        );
+    }
+
+    #[test]
+    fn type_to_any_of_within_array() {
+        let lhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "type": "number",
+                }
+            }
+        }};
+
+        let rhs = json! {{
+            "type": "array",
+            "items": [
+                {"const": "start_unmerge"},
+                {"$ref": "#/definitions/Hello"}
+            ],
+            "definitions": {
+                "Hello": {
+                    "anyOf": [{"type": "number", "minimum": 1.0}]
+                }
+            }
+        }};
+
+        let diff = diff(lhs, rhs).unwrap();
+
+        assert_debug_snapshot!(diff, @r###"
+        [
+            Change {
+                path: ".1",
+                change: RangeAdd {
+                    added: Minimum,
+                    value: 1.0,
+                },
+            },
+        ]
+        "###);
+    }
 }

@@ -1,3 +1,4 @@
+use schemars::schema::InstanceType;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -173,6 +174,20 @@ pub enum JsonSchemaType {
     Boolean,
     #[serde(rename = "null")]
     Null,
+}
+
+impl From<JsonSchemaType> for InstanceType {
+    fn from(t: JsonSchemaType) -> Self {
+        match t {
+            JsonSchemaType::String => InstanceType::String,
+            JsonSchemaType::Number => InstanceType::Number,
+            JsonSchemaType::Integer => InstanceType::Integer,
+            JsonSchemaType::Object => InstanceType::Object,
+            JsonSchemaType::Array => InstanceType::Array,
+            JsonSchemaType::Boolean => InstanceType::Boolean,
+            JsonSchemaType::Null => InstanceType::Null,
+        }
+    }
 }
 
 /// Range constraints in JSON schema.
