@@ -1,10 +1,8 @@
 # json-schema-diff
 
-A work-in-progress tool to diff changes between JSON schemas. A lot of JSON schema features are not implemented and therefore ignored, such as:
-
-* `required`
-* `patternProperties` (entirely ignored)
-* `const` (changes from `{"const": "foo"}` to `{"type": "string"}` are not detected)
+A work-in-progress tool to diff changes between JSON schemas. A lot of JSON
+schema features are not implemented and therefore ignored, see [the issue
+tracker](https://github.com/getsentry/json-schema-diff/issues).
 
 Use this tool as a best-effort to find obviously breaking changes in CI, but not for much more.
 
