@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
-use schemars::schema::{InstanceType, RootSchema, Schema, SchemaObject, SingleOrVec};
+use schemars::schema::{
+    InstanceType, NumberValidation, RootSchema, Schema, SchemaObject, SingleOrVec,
+    SubschemaValidation,
+};
 use serde_json::Value;
 
 use crate::{Change, ChangeKind, Error, JsonSchemaType, Range};
@@ -15,6 +18,7 @@ impl DiffWalker {
     fn diff_any_of(
         &mut self,
         json_path: &str,
+        is_rhs_split: bool,
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
@@ -29,9 +33,13 @@ impl DiffWalker {
             for (i, (lhs_inner, rhs_inner)) in
                 lhs_any_of.iter_mut().zip(rhs_any_of.iter_mut()).enumerate()
             {
-                let new_path = format!("{json_path}.<anyOf:{i}>");
-                self.diff(
+                let new_path = match is_rhs_split {
+                    true => json_path.to_owned(),
+                    false => format!("{json_path}.<anyOf:{i}>"),
+                };
+                self.do_diff(
                     &new_path,
+                    true,
                     &mut lhs_inner.clone().into_object(),
                     &mut rhs_inner.clone().into_object(),
                 )?;
@@ -149,22 +157,22 @@ impl DiffWalker {
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        let mut diff = |lhs, rhs, range| match (lhs, rhs) {
-            (None, Some(value)) => self.changes.push(Change {
+        let diff = |lhs, rhs, range| match (lhs, rhs) {
+            (None, Some(value)) => Some(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RangeAdd {
                     added: range,
                     value,
                 },
             }),
-            (Some(value), None) => self.changes.push(Change {
+            (Some(value), None) => Some(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RangeRemove {
                     removed: range,
                     value,
                 },
             }),
-            (Some(lhs), Some(rhs)) if lhs != rhs => self.changes.push(Change {
+            (Some(lhs), Some(rhs)) if lhs != rhs => Some(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RangeChange {
                     changed: range,
@@ -172,10 +180,22 @@ impl DiffWalker {
                     new_value: rhs,
                 },
             }),
-            _ => (),
+            _ => None,
         };
-        diff(lhs.number().minimum, rhs.number().minimum, Range::Minimum);
-        diff(lhs.number().maximum, rhs.number().maximum, Range::Maximum);
+        if let Some(diff) = diff(
+            lhs.number_validation().minimum,
+            rhs.number_validation().minimum,
+            Range::Minimum,
+        ) {
+            self.changes.push(diff)
+        }
+        if let Some(diff) = diff(
+            lhs.number_validation().maximum,
+            rhs.number_validation().maximum,
+            Range::Maximum,
+        ) {
+            self.changes.push(diff)
+        }
         Ok(())
     }
 
@@ -319,27 +339,94 @@ impl DiffWalker {
         Ok(())
     }
 
+    fn restrictions_for_single_type(schema_object: &SchemaObject, ty: InstanceType) -> Schema {
+        let mut ret = SchemaObject {
+            instance_type: Some(SingleOrVec::Single(Box::new(ty))),
+            ..Default::default()
+        };
+        match ty {
+            InstanceType::String => ret.string = schema_object.string.clone(),
+            InstanceType::Number | InstanceType::Integer => {
+                ret.number = schema_object.number.clone()
+            }
+            InstanceType::Object => ret.object = schema_object.object.clone(),
+            InstanceType::Array => ret.array = schema_object.array.clone(),
+            _ => (),
+        }
+        Schema::Object(ret)
+    }
+
+    /// Split a schema into multiple schemas, one for each type in the multiple type.
+    /// Returns the new schema and whether the schema was changed.
+    fn split_types(schema_object: &mut SchemaObject) -> (&mut SchemaObject, bool) {
+        let is_split = match schema_object.effective_type() {
+            InternalJsonSchemaType::Multiple(types)
+                if schema_object.subschemas().any_of.is_none() =>
+            {
+                *schema_object = SchemaObject {
+                    subschemas: Some(Box::new(SubschemaValidation {
+                        any_of: Some(
+                            types
+                                .into_iter()
+                                .map(|ty| {
+                                    Self::restrictions_for_single_type(schema_object, ty.into())
+                                })
+                                .collect(),
+                        ),
+                        ..Default::default()
+                    })),
+                    ..Default::default()
+                };
+                true
+            }
+            _ => false,
+        };
+        (schema_object, is_split)
+    }
+
+    fn do_diff(
+        &mut self,
+        json_path: &str,
+        // Whether we are comparing elements in any_of subschemas
+        comparing_any_of: bool,
+        lhs: &mut SchemaObject,
+        rhs: &mut SchemaObject,
+    ) -> Result<(), Error> {
+        self.resolve_references(lhs, rhs)?;
+        let (lhs, is_lhs_split) = Self::split_types(lhs);
+        let (rhs, is_rhs_split) = Self::split_types(rhs);
+        self.diff_any_of(json_path, is_rhs_split, lhs, rhs)?;
+        if !comparing_any_of {
+            self.diff_instance_types(json_path, lhs, rhs);
+        }
+        // If we split the types, we don't want to compare type-specific properties
+        // because they are already compared in the `Self::diff_any_of`
+        if !is_lhs_split && !is_rhs_split {
+            self.diff_properties(json_path, lhs, rhs)?;
+            self.diff_range(json_path, lhs, rhs)?;
+            self.diff_additional_properties(json_path, lhs, rhs)?;
+            self.diff_array_items(json_path, lhs, rhs)?;
+            self.diff_required(json_path, lhs, rhs)?;
+        }
+        Ok(())
+    }
+
     pub fn diff(
         &mut self,
         json_path: &str,
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        self.resolve_references(lhs, rhs)?;
-        self.diff_any_of(json_path, lhs, rhs)?;
-        self.diff_instance_types(json_path, lhs, rhs);
-        self.diff_properties(json_path, lhs, rhs)?;
-        self.diff_range(json_path, lhs, rhs)?;
-        self.diff_additional_properties(json_path, lhs, rhs)?;
-        self.diff_array_items(json_path, lhs, rhs)?;
-        self.diff_required(json_path, lhs, rhs)?;
-        Ok(())
+        self.do_diff(json_path, false, lhs, rhs)
     }
 }
 
 trait JsonSchemaExt {
     fn is_true(&self) -> bool;
     fn effective_type(&mut self) -> InternalJsonSchemaType;
+    /// Look for NumberValidation from "number" property in the schema.
+    /// Check if `anyOf` subschema has NumberValidation, if the subschema is a single type.
+    fn number_validation(&mut self) -> NumberValidation;
 }
 
 impl JsonSchemaExt for SchemaObject {
@@ -350,15 +437,24 @@ impl JsonSchemaExt for SchemaObject {
     fn effective_type(&mut self) -> InternalJsonSchemaType {
         if let Some(ref ty) = self.instance_type {
             match ty {
-                SingleOrVec::Single(ty) => schemars_to_own(**ty).into(),
+                SingleOrVec::Single(ty) => JsonSchemaType::from(**ty).into(),
                 SingleOrVec::Vec(tys) => InternalJsonSchemaType::Multiple(
-                    tys.iter().copied().map(schemars_to_own).collect(),
+                    tys.iter().copied().map(JsonSchemaType::from).collect(),
                 ),
             }
         } else if let Some(ref constant) = self.const_value {
             serde_value_to_own(constant).into()
         } else if !self.object().properties.is_empty() {
             JsonSchemaType::Object.into()
+        } else if let Some(ref any_of) = self.subschemas().any_of {
+            InternalJsonSchemaType::Multiple(
+                any_of
+                    .iter()
+                    .flat_map(|a| Self::effective_type(&mut a.clone().into_object()).explode())
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect(),
+            )
         } else if self
             .subschemas()
             .not
@@ -368,6 +464,20 @@ impl JsonSchemaExt for SchemaObject {
             InternalJsonSchemaType::Never
         } else {
             InternalJsonSchemaType::Any
+        }
+    }
+
+    fn number_validation(&mut self) -> NumberValidation {
+        let number_validation = self.number().clone();
+        if number_validation == NumberValidation::default() {
+            self.subschemas()
+                .any_of
+                .as_ref()
+                .and_then(|a| a.get(0))
+                .map(|subschema| subschema.clone().into_object().number().clone())
+                .unwrap_or_default()
+        } else {
+            number_validation
         }
     }
 }
@@ -424,17 +534,5 @@ fn serde_value_to_own(val: &Value) -> JsonSchemaType {
         Value::Bool(_) => JsonSchemaType::Boolean,
         Value::Array(_) => JsonSchemaType::Array,
         Value::Object(_) => JsonSchemaType::Object,
-    }
-}
-
-fn schemars_to_own(other: InstanceType) -> JsonSchemaType {
-    match other {
-        InstanceType::Null => JsonSchemaType::Null,
-        InstanceType::Boolean => JsonSchemaType::Boolean,
-        InstanceType::Object => JsonSchemaType::Object,
-        InstanceType::Array => JsonSchemaType::Array,
-        InstanceType::Number => JsonSchemaType::Number,
-        InstanceType::String => JsonSchemaType::String,
-        InstanceType::Integer => JsonSchemaType::Integer,
     }
 }
