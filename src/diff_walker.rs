@@ -438,9 +438,9 @@ impl JsonSchemaExt for SchemaObject {
     fn effective_type(&mut self) -> InternalJsonSchemaType {
         if let Some(ref ty) = self.instance_type {
             match ty {
-                SingleOrVec::Single(ty) => schemars_to_own(**ty).into(),
+                SingleOrVec::Single(ty) => JsonSchemaType::from(**ty).into(),
                 SingleOrVec::Vec(tys) => InternalJsonSchemaType::Multiple(
-                    tys.iter().copied().map(schemars_to_own).collect(),
+                    tys.iter().copied().map(JsonSchemaType::from).collect(),
                 ),
             }
         } else if let Some(ref constant) = self.const_value {
@@ -535,17 +535,5 @@ fn serde_value_to_own(val: &Value) -> JsonSchemaType {
         Value::Bool(_) => JsonSchemaType::Boolean,
         Value::Array(_) => JsonSchemaType::Array,
         Value::Object(_) => JsonSchemaType::Object,
-    }
-}
-
-fn schemars_to_own(other: InstanceType) -> JsonSchemaType {
-    match other {
-        InstanceType::Null => JsonSchemaType::Null,
-        InstanceType::Boolean => JsonSchemaType::Boolean,
-        InstanceType::Object => JsonSchemaType::Object,
-        InstanceType::Array => JsonSchemaType::Array,
-        InstanceType::Number => JsonSchemaType::Number,
-        InstanceType::String => JsonSchemaType::String,
-        InstanceType::Integer => JsonSchemaType::Integer,
     }
 }

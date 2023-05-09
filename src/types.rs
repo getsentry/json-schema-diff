@@ -190,6 +190,20 @@ impl From<JsonSchemaType> for InstanceType {
     }
 }
 
+impl From<InstanceType> for JsonSchemaType {
+    fn from(t: InstanceType) -> Self {
+        match t {
+            InstanceType::String => JsonSchemaType::String,
+            InstanceType::Number => JsonSchemaType::Number,
+            InstanceType::Integer => JsonSchemaType::Integer,
+            InstanceType::Object => JsonSchemaType::Object,
+            InstanceType::Array => JsonSchemaType::Array,
+            InstanceType::Boolean => JsonSchemaType::Boolean,
+            InstanceType::Null => JsonSchemaType::Null,
+        }
+    }
+}
+
 /// Range constraints in JSON schema.
 #[derive(Serialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
 #[allow(missing_docs)]
