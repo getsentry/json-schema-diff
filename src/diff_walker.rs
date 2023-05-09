@@ -18,7 +18,7 @@ impl DiffWalker {
     fn diff_any_of(
         &mut self,
         json_path: &str,
-        is_rhs_exploded: bool,
+        is_rhs_split: bool,
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
@@ -33,7 +33,7 @@ impl DiffWalker {
             for (i, (lhs_inner, rhs_inner)) in
                 lhs_any_of.iter_mut().zip(rhs_any_of.iter_mut()).enumerate()
             {
-                let new_path = match is_rhs_exploded {
+                let new_path = match is_rhs_split {
                     true => json_path.to_owned(),
                     false => format!("{json_path}.<anyOf:{i}>"),
                 };
