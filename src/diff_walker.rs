@@ -358,31 +358,30 @@ impl DiffWalker {
 
     /// Split a schema into multiple schemas, one for each type in the multiple type.
     /// Returns the new schema and whether the schema was changed.
-    fn split_types(schema_object: &mut SchemaObject) -> (SchemaObject, bool) {
-        match schema_object.effective_type() {
+    fn split_types(schema_object: &mut SchemaObject) -> (&mut SchemaObject, bool) {
+        let is_split = match schema_object.effective_type() {
             InternalJsonSchemaType::Multiple(types)
                 if schema_object.subschemas().any_of.is_none() =>
             {
-                (
-                    SchemaObject {
-                        subschemas: Some(Box::new(SubschemaValidation {
-                            any_of: Some(
-                                types
-                                    .into_iter()
-                                    .map(|ty| {
-                                        Self::restrictions_for_single_type(schema_object, ty.into())
-                                    })
-                                    .collect(),
-                            ),
-                            ..Default::default()
-                        })),
+                *schema_object = SchemaObject {
+                    subschemas: Some(Box::new(SubschemaValidation {
+                        any_of: Some(
+                            types
+                                .into_iter()
+                                .map(|ty| {
+                                    Self::restrictions_for_single_type(schema_object, ty.into())
+                                })
+                                .collect(),
+                        ),
                         ..Default::default()
-                    },
-                    true,
-                )
+                    })),
+                    ..Default::default()
+                };
+                true
             }
-            _ => (schema_object.clone(), false),
-        }
+            _ => false,
+        };
+        (schema_object, is_split)
     }
 
     fn do_diff(
@@ -394,20 +393,20 @@ impl DiffWalker {
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
         self.resolve_references(lhs, rhs)?;
-        let (mut lhs, is_lhs_split) = Self::split_types(lhs);
-        let (mut rhs, is_rhs_split) = Self::split_types(rhs);
-        self.diff_any_of(json_path, is_rhs_split, &mut lhs, &mut rhs)?;
+        let (lhs, is_lhs_split) = Self::split_types(lhs);
+        let (rhs, is_rhs_split) = Self::split_types(rhs);
+        self.diff_any_of(json_path, is_rhs_split, lhs, rhs)?;
         if !comparing_any_of {
-            self.diff_instance_types(json_path, &mut lhs, &mut rhs);
+            self.diff_instance_types(json_path, lhs, rhs);
         }
         // If we split the types, we don't want to compare type-specific properties
         // because they are already compared in the `Self::diff_any_of`
         if !is_lhs_split && !is_rhs_split {
-            self.diff_properties(json_path, &mut lhs, &mut rhs)?;
-            self.diff_range(json_path, &mut lhs, &mut rhs)?;
-            self.diff_additional_properties(json_path, &mut lhs, &mut rhs)?;
-            self.diff_array_items(json_path, &mut lhs, &mut rhs)?;
-            self.diff_required(json_path, &mut lhs, &mut rhs)?;
+            self.diff_properties(json_path, lhs, rhs)?;
+            self.diff_range(json_path, lhs, rhs)?;
+            self.diff_additional_properties(json_path, lhs, rhs)?;
+            self.diff_array_items(json_path, lhs, rhs)?;
+            self.diff_required(json_path, lhs, rhs)?;
         }
         Ok(())
     }
