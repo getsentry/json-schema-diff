@@ -1,0 +1,13 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/type/number_to_integer.json
+---
+[
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Number,
+        },
+    },
+]

@@ -1,0 +1,25 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/properties/change.json
+---
+[
+    Change {
+        path: ".hello",
+        change: TypeRemove {
+            removed: String,
+        },
+    },
+    Change {
+        path: ".hello",
+        change: TypeAdd {
+            added: Number,
+        },
+    },
+    Change {
+        path: ".hello",
+        change: TypeAdd {
+            added: Integer,
+        },
+    },
+]

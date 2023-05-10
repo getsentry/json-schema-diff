@@ -1,0 +1,13 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/required/add.json
+---
+[
+    Change {
+        path: "",
+        change: RequiredAdd {
+            property: "value",
+        },
+    },
+]

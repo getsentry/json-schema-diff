@@ -1,0 +1,19 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/ref/factor_out_definitions_and_change.json
+---
+[
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Object,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Array,
+        },
+    },
+]

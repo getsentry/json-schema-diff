@@ -1,0 +1,14 @@
+{
+  "lhs": {
+    "anyOf": [
+      {"type": "array"},
+      {"type": "string"}
+    ]
+  },
+  "rhs": {
+    "anyOf": [
+      {"type": "string"},
+      {"type": "array"}
+    ]
+  }
+}

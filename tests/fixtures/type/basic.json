@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "string" },
+  "rhs": { "type": "number" }
+}

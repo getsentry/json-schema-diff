@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/any_of/type_to_less_strict_any_of.json
+---
+[
+    Change {
+        path: "",
+        change: RangeRemove {
+            removed: Minimum,
+            value: 1.0,
+        },
+    },
+]

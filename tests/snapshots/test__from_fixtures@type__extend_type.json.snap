@@ -1,0 +1,19 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/type/extend_type.json
+---
+[
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Number,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Integer,
+        },
+    },
+]

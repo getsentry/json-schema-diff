@@ -1,0 +1,14 @@
+{
+  "lhs": {
+    "type": "object",
+    "properties": {
+      "hello": {"type": "string"}
+    }
+  },
+  "rhs": {
+    "type": "object",
+    "properties": {
+      "hello": {"type": "number"}
+    }
+  }
+}

@@ -30,4 +30,4 @@ thiserror = "1.0.40"
 build-binary = ["clap", "anyhow"]
 
 [dev-dependencies]
-insta = "1.29.0"
+insta = { version = "1.29.0", features = ["glob"] }

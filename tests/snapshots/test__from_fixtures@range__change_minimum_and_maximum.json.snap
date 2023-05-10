@@ -1,0 +1,23 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/range/change_minimum_and_maximum.json
+---
+[
+    Change {
+        path: "",
+        change: RangeChange {
+            changed: Minimum,
+            old_value: 1.0,
+            new_value: 1.5,
+        },
+    },
+    Change {
+        path: "",
+        change: RangeChange {
+            changed: Maximum,
+            old_value: 2.0,
+            new_value: 2.5,
+        },
+    },
+]

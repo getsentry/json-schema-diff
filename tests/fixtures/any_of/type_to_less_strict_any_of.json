@@ -1,0 +1,9 @@
+{
+  "lhs": {
+    "type": "integer",
+    "minimum": 1.0
+  },
+  "rhs": {
+    "anyOf": [{"type": "integer"}]
+  }
+}

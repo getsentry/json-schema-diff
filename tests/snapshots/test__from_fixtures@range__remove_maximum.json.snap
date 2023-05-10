@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/range/remove_maximum.json
+---
+[
+    Change {
+        path: "",
+        change: RangeRemove {
+            removed: Maximum,
+            value: 1.0,
+        },
+    },
+]

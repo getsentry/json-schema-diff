@@ -1,0 +1,11 @@
+{
+  "lhs": {
+    "type": "object"
+  },
+  "rhs": {
+    "$ref": "#/definitions/Hello",
+    "definitions": {
+      "Hello": {"type": "object"}
+    }
+  }
+}

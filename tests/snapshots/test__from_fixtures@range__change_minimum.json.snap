@@ -1,0 +1,15 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/range/change_minimum.json
+---
+[
+    Change {
+        path: "",
+        change: RangeChange {
+            changed: Minimum,
+            old_value: 1.0,
+            new_value: 1.3,
+        },
+    },
+]

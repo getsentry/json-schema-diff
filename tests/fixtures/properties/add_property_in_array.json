@@ -1,0 +1,27 @@
+{
+  "lhs": {
+    "type": "array",
+    "items": [
+      {"const": "start_unmerge"},
+      {"$ref": "#/definitions/Hello"}
+    ],
+    "definitions": {
+      "Hello": {
+        "type": "object"
+      }
+    }
+  },
+  "rhs": {
+    "type": "array",
+    "items": [
+      {"const": "start_unmerge"},
+      {"$ref": "#/definitions/Hello"}
+    ],
+    "definitions": {
+      "Hello": {
+        "type": "object",
+        "properties": {"transaction_id": {"type": "string"}}
+      }
+    }
+  }
+}
