@@ -1,0 +1,4 @@
+{
+  "lhs": { "const": "hello" },
+  "rhs": { "type": ["string"] }
+}

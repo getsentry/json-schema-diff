@@ -1,0 +1,49 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/additional_properties/restrict.json
+---
+[
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: String,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: Number,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: Integer,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: Object,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: Array,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: Boolean,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeRemove {
+            removed: Null,
+        },
+    },
+]

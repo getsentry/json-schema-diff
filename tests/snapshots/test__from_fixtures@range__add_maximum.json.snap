@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/range/add_maximum.json
+---
+[
+    Change {
+        path: "",
+        change: RangeAdd {
+            added: Maximum,
+            value: 1.0,
+        },
+    },
+]

@@ -1,0 +1,8 @@
+{
+  "lhs": {
+    "required": ["value"]
+  },
+  "rhs": {
+    "required": []
+  }
+}

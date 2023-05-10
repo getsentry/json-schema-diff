@@ -1,0 +1,9 @@
+{
+  "lhs": {
+    "type": "number"
+  },
+  "rhs": {
+    "type": "number",
+    "minimum": 1.0
+  }
+}

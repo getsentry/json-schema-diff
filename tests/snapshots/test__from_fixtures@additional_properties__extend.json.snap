@@ -1,0 +1,49 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/additional_properties/extend.json
+---
+[
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: String,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: Number,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: Integer,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: Object,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: Array,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: Boolean,
+        },
+    },
+    Change {
+        path: ".<additionalProperties>",
+        change: TypeAdd {
+            added: Null,
+        },
+    },
+]

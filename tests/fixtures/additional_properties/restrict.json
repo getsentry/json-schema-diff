@@ -1,0 +1,4 @@
+{
+  "lhs": { "additionalProperties": true },
+  "rhs": { "additionalProperties": false }
+}

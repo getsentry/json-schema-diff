@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/properties/add.json
+---
+[
+    Change {
+        path: "",
+        change: PropertyAdd {
+            lhs_additional_properties: true,
+            added: "world",
+        },
+    },
+]

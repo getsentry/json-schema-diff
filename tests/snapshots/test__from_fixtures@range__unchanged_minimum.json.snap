@@ -1,0 +1,6 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/range/unchanged_minimum.json
+---
+[]

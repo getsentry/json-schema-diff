@@ -1,0 +1,15 @@
+{
+  "lhs": {
+    "type": "object",
+    "properties": {
+      "hello": {"type": "string"},
+      "world": {"type": "string"}
+    }
+  },
+  "rhs": {
+    "type": "object",
+    "properties": {
+      "hello": {"type": "string"}
+    }
+  }
+}

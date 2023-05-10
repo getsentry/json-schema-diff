@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/properties/remove_property_while_allowing_additional_properties.json
+---
+[
+    Change {
+        path: "",
+        change: PropertyRemove {
+            lhs_additional_properties: true,
+            removed: "foobar",
+        },
+    },
+]

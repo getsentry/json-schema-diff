@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/properties/add_property_in_array_of_any_of.json
+---
+[
+    Change {
+        path: ".<anyOf:0>.1",
+        change: PropertyAdd {
+            lhs_additional_properties: true,
+            added: "transaction_id",
+        },
+    },
+]

@@ -1,0 +1,13 @@
+---
+source: tests/test.rs
+expression: diff
+input_file: tests/fixtures/type/integer_to_number.json
+---
+[
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Number,
+        },
+    },
+]

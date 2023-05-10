@@ -1,0 +1,24 @@
+{
+  "lhs": {
+    "anyOf": [
+      {
+        "type": "array",
+        "items": [
+          {"const": "start_unmerge"},
+          {"type": "object"}
+        ]
+      }
+    ]
+  },
+  "rhs": {
+    "anyOf": [
+      {
+        "type": "array",
+        "items": [
+          {"const": "start_unmerge"},
+          {"type": "object", "properties": {"transaction_id": {"type": "string"}}}
+        ]
+      }
+    ]
+  }
+}

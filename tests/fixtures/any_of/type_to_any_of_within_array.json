@@ -1,0 +1,26 @@
+{
+  "lhs": {
+    "type": "array",
+    "items": [
+      {"const": "start_unmerge"},
+      {"$ref": "#/definitions/Hello"}
+    ],
+    "definitions": {
+      "Hello": {
+        "type": "number"
+      }
+    }
+  },
+  "rhs": {
+    "type": "array",
+    "items": [
+      {"const": "start_unmerge"},
+      {"$ref": "#/definitions/Hello"}
+    ],
+    "definitions": {
+      "Hello": {
+        "anyOf": [{"type": "number", "minimum": 1.0}]
+      }
+    }
+  }
+}

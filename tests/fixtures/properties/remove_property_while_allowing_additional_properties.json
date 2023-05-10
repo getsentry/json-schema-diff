@@ -1,0 +1,13 @@
+{
+  "lhs": {
+    "type": "object",
+    "properties": {
+      "foobar": {"type": "string"}
+    },
+    "additionalProperties": true
+  },
+  "rhs": {
+    "type": "object",
+    "additionalProperties": true
+  }
+}
