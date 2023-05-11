@@ -1,0 +1,42 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    const: foo
+  rhs:
+    const: 1
+input_file: tests/fixtures/const/const_string_to_const_number.json
+---
+[
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: String,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Number,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Integer,
+        },
+    },
+    Change {
+        path: "",
+        change: ConstRemove {
+            removed: String("foo"),
+        },
+    },
+    Change {
+        path: "",
+        change: ConstAdd {
+            added: Number(1),
+        },
+    },
+]

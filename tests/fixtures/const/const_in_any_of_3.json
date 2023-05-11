@@ -1,0 +1,4 @@
+{
+  "lhs": { "anyOf": [{ "type": "object" }, { "type": "string" }, { "const": { "key": "value" } }] },
+  "rhs": { "anyOf": [{ "properties": { "key": { "const": "value" } } }, { "const": "1" }] }
+}

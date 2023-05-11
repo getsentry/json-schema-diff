@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "object" },
+  "rhs": { "const": { "key": "value" } }
+}

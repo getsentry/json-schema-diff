@@ -1,0 +1,20 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    type: object
+  rhs:
+    const:
+      key: value
+input_file: tests/fixtures/const/object_to_const_object.json
+---
+[
+    Change {
+        path: "",
+        change: PropertyAdd {
+            lhs_additional_properties: true,
+            added: "key",
+        },
+    },
+]

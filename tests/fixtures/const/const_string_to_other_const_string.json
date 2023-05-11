@@ -1,0 +1,4 @@
+{
+  "lhs": { "const": "foo" },
+  "rhs": { "const": "bar" }
+}

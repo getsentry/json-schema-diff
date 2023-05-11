@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    const:
+      key: value
+  rhs:
+    properties:
+      key:
+        const: value
+input_file: tests/fixtures/const/const_in_properties.json
+---
+[]

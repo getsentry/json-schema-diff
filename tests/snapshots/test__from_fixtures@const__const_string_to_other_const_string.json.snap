@@ -1,0 +1,24 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    const: foo
+  rhs:
+    const: bar
+input_file: tests/fixtures/const/const_string_to_other_const_string.json
+---
+[
+    Change {
+        path: "",
+        change: ConstRemove {
+            removed: String("foo"),
+        },
+    },
+    Change {
+        path: "",
+        change: ConstAdd {
+            added: String("bar"),
+        },
+    },
+]
