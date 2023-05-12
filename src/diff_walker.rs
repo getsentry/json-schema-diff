@@ -358,7 +358,7 @@ impl DiffWalker {
 
     /// Split a schema into multiple schemas, one for each type in the multiple type.
     /// Returns the new schema and whether the schema was changed.
-    fn split_types(schema_object: &mut SchemaObject) -> (&mut SchemaObject, bool) {
+    fn split_types(schema_object: &mut SchemaObject) -> bool {
         let is_split = match schema_object.effective_type() {
             InternalJsonSchemaType::Multiple(types)
                 if schema_object.subschemas().any_of.is_none() =>
@@ -381,7 +381,7 @@ impl DiffWalker {
             }
             _ => false,
         };
-        (schema_object, is_split)
+        is_split
     }
 
     fn do_diff(
@@ -393,8 +393,8 @@ impl DiffWalker {
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
         self.resolve_references(lhs, rhs)?;
-        let (lhs, is_lhs_split) = Self::split_types(lhs);
-        let (rhs, is_rhs_split) = Self::split_types(rhs);
+        let is_lhs_split = Self::split_types(lhs);
+        let is_rhs_split = Self::split_types(rhs);
         self.diff_any_of(json_path, is_rhs_split, lhs, rhs)?;
         if !comparing_any_of {
             self.diff_instance_types(json_path, lhs, rhs);
