@@ -1,0 +1,4 @@
+{
+  "lhs": { "anyOf": [{ "type": "number" }, { "type": "string" }, { "const": 1 }] },
+  "rhs": { "anyOf": [{ "const": 1 }, { "const": "1" }] }
+}

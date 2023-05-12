@@ -1,0 +1,30 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    type: integer
+  rhs:
+    const: foo
+input_file: tests/fixtures/const/integer_to_const_string.json
+---
+[
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Integer,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: String,
+        },
+    },
+    Change {
+        path: "",
+        change: ConstAdd {
+            added: String("foo"),
+        },
+    },
+]

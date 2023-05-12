@@ -1,0 +1,28 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    anyOf:
+      - type: number
+      - type: string
+  rhs:
+    anyOf:
+      - const: 1
+      - const: "1"
+input_file: tests/fixtures/const/const_in_any_of_1.json
+---
+[
+    Change {
+        path: ".<anyOf:0>",
+        change: ConstAdd {
+            added: Number(1),
+        },
+    },
+    Change {
+        path: ".<anyOf:1>",
+        change: ConstAdd {
+            added: String("1"),
+        },
+    },
+]

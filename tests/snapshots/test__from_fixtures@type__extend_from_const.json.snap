@@ -9,4 +9,11 @@ info:
       - string
 input_file: tests/fixtures/type/extend_from_const.json
 ---
-[]
+[
+    Change {
+        path: "",
+        change: ConstRemove {
+            removed: String("hello"),
+        },
+    },
+]

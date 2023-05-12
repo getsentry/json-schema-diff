@@ -1,0 +1,4 @@
+{
+  "lhs": { "const": { "key": "value" } },
+  "rhs": { "properties": { "key": { "const": "value" } } }
+}

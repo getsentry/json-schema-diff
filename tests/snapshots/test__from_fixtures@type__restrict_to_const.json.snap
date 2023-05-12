@@ -9,4 +9,11 @@ info:
     const: hello
 input_file: tests/fixtures/type/restrict_to_const.json
 ---
-[]
+[
+    Change {
+        path: "",
+        change: ConstAdd {
+            added: String("hello"),
+        },
+    },
+]

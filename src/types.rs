@@ -26,6 +26,16 @@ pub enum ChangeKind {
         /// The type in question.
         removed: JsonSchemaType,
     },
+    /// A const value has been added as an allowed value.
+    ConstAdd {
+        /// The value of the added const.
+        added: serde_json::Value,
+    },
+    /// A const has been removed as an allowed value.
+    ConstRemove {
+        /// The value of the removed const.
+        removed: serde_json::Value,
+    },
     /// A property has been added and (depending on additionalProperties) is now additionally
     /// allowed.
     PropertyAdd {
@@ -117,6 +127,8 @@ impl ChangeKind {
         match self {
             Self::TypeAdd { .. } => false,
             Self::TypeRemove { .. } => true,
+            Self::ConstAdd { .. } => true,
+            Self::ConstRemove { .. } => false,
             Self::PropertyAdd {
                 lhs_additional_properties,
                 ..

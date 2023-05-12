@@ -1,8 +1,8 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use schemars::schema::{
-    InstanceType, NumberValidation, RootSchema, Schema, SchemaObject, SingleOrVec,
-    SubschemaValidation,
+    InstanceType, NumberValidation, ObjectValidation, RootSchema, Schema, SchemaObject,
+    SingleOrVec, SubschemaValidation,
 };
 use serde_json::Value;
 
@@ -74,6 +74,37 @@ impl DiffWalker {
                     added: added.clone(),
                 },
             });
+        }
+    }
+
+    fn diff_const(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
+        Self::normalize_const(lhs);
+        Self::normalize_const(rhs);
+        match (&lhs.const_value, &rhs.const_value) {
+            (Some(value), None) => self.changes.push(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::ConstRemove {
+                    removed: value.clone(),
+                },
+            }),
+            (None, Some(value)) => self.changes.push(Change {
+                path: json_path.to_owned(),
+                change: ChangeKind::ConstAdd {
+                    added: value.clone(),
+                },
+            }),
+            (Some(l), Some(r)) if l != r => {
+                if l.is_object() && r.is_object() {}
+                self.changes.push(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::ConstRemove { removed: l.clone() },
+                });
+                self.changes.push(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::ConstAdd { added: r.clone() },
+                });
+            }
+            _ => (),
         }
     }
 
@@ -384,6 +415,33 @@ impl DiffWalker {
         is_split
     }
 
+    fn normalize_const(schema_object: &mut SchemaObject) {
+        fn do_normalize(value: Value) -> SchemaObject {
+            match value {
+                Value::Object(obj) => {
+                    let properties = obj
+                        .into_iter()
+                        .map(|(k, v)| (k, Schema::Object(do_normalize(v))))
+                        .collect::<BTreeMap<_, _>>();
+                    SchemaObject {
+                        object: Some(Box::new(ObjectValidation {
+                            properties,
+                            ..Default::default()
+                        })),
+                        ..Default::default()
+                    }
+                }
+                _ => SchemaObject {
+                    const_value: Some(value),
+                    ..Default::default()
+                },
+            }
+        }
+        if let Some(value) = schema_object.const_value.take() {
+            *schema_object = do_normalize(value)
+        }
+    }
+
     fn do_diff(
         &mut self,
         json_path: &str,
@@ -399,6 +457,7 @@ impl DiffWalker {
         if !comparing_any_of {
             self.diff_instance_types(json_path, lhs, rhs);
         }
+        self.diff_const(json_path, lhs, rhs);
         // If we split the types, we don't want to compare type-specific properties
         // because they are already compared in the `Self::diff_any_of`
         if !is_lhs_split && !is_rhs_split {
