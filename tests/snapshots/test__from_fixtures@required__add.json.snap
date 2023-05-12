@@ -1,6 +1,12 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    required: []
+  rhs:
+    required:
+      - value
 input_file: tests/fixtures/required/add.json
 ---
 [

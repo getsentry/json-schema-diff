@@ -1,6 +1,16 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    additionalProperties: true
+    properties:
+      foobar:
+        type: string
+    type: object
+  rhs:
+    additionalProperties: true
+    type: object
 input_file: tests/fixtures/properties/remove_property_while_allowing_additional_properties.json
 ---
 [

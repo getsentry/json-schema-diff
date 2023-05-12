@@ -1,6 +1,13 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    minimum: 1
+    type: number
+  rhs:
+    minimum: 1.3
+    type: number
 input_file: tests/fixtures/range/change_minimum.json
 ---
 [

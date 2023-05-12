@@ -1,6 +1,12 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    type:
+      - string
+  rhs:
+    const: hello
 input_file: tests/fixtures/type/restrict_to_const.json
 ---
 []

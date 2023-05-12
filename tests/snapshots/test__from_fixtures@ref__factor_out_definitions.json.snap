@@ -1,6 +1,14 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    type: object
+  rhs:
+    $ref: "#/definitions/Hello"
+    definitions:
+      Hello:
+        type: object
 input_file: tests/fixtures/ref/factor_out_definitions.json
 ---
 []

@@ -1,6 +1,15 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    anyOf:
+      - minimum: 1
+        type: integer
+  rhs:
+    type:
+      - integer
+      - string
 input_file: tests/fixtures/any_of/any_of_with_constraint_to_type_1.json
 ---
 [

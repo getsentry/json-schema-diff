@@ -1,6 +1,11 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    type: integer
+  rhs:
+    type: number
 input_file: tests/fixtures/type/integer_to_number.json
 ---
 [
