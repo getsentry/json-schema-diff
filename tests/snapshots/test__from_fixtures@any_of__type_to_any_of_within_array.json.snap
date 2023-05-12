@@ -1,6 +1,25 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    definitions:
+      Hello:
+        type: number
+    items:
+      - const: start_unmerge
+      - $ref: "#/definitions/Hello"
+    type: array
+  rhs:
+    definitions:
+      Hello:
+        anyOf:
+          - minimum: 1
+            type: number
+    items:
+      - const: start_unmerge
+      - $ref: "#/definitions/Hello"
+    type: array
 input_file: tests/fixtures/any_of/type_to_any_of_within_array.json
 ---
 [

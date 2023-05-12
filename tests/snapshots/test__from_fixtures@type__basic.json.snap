@@ -1,6 +1,11 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    type: string
+  rhs:
+    type: number
 input_file: tests/fixtures/type/basic.json
 ---
 [

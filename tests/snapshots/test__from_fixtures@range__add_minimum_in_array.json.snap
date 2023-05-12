@@ -1,6 +1,24 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    definitions:
+      Hello:
+        type: number
+    items:
+      - const: start_unmerge
+      - $ref: "#/definitions/Hello"
+    type: array
+  rhs:
+    definitions:
+      Hello:
+        minimum: 1
+        type: number
+    items:
+      - const: start_unmerge
+      - $ref: "#/definitions/Hello"
+    type: array
 input_file: tests/fixtures/range/add_minimum_in_array.json
 ---
 [

@@ -1,6 +1,11 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    additionalProperties: false
+  rhs:
+    additionalProperties: true
 input_file: tests/fixtures/additional_properties/extend.json
 ---
 [

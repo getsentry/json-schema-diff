@@ -1,6 +1,11 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    additionalProperties: true
+  rhs:
+    additionalProperties: false
 input_file: tests/fixtures/additional_properties/restrict.json
 ---
 [

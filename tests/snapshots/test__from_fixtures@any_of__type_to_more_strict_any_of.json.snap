@@ -1,6 +1,13 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    type: integer
+  rhs:
+    anyOf:
+      - type: integer
+      - type: string
 input_file: tests/fixtures/any_of/type_to_more_strict_any_of.json
 ---
 [

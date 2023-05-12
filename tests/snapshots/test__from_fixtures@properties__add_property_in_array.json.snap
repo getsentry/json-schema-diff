@@ -1,6 +1,26 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    definitions:
+      Hello:
+        type: object
+    items:
+      - const: start_unmerge
+      - $ref: "#/definitions/Hello"
+    type: array
+  rhs:
+    definitions:
+      Hello:
+        properties:
+          transaction_id:
+            type: string
+        type: object
+    items:
+      - const: start_unmerge
+      - $ref: "#/definitions/Hello"
+    type: array
 input_file: tests/fixtures/properties/add_property_in_array.json
 ---
 [

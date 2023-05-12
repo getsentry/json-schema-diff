@@ -1,6 +1,19 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    properties:
+      hello:
+        type: string
+    type: object
+  rhs:
+    properties:
+      hello:
+        type: string
+      world:
+        type: string
+    type: object
 input_file: tests/fixtures/properties/add.json
 ---
 [

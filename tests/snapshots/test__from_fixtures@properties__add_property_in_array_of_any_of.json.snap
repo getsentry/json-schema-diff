@@ -1,6 +1,22 @@
 ---
 source: tests/test.rs
 expression: diff
+info:
+  lhs:
+    anyOf:
+      - items:
+          - const: start_unmerge
+          - type: object
+        type: array
+  rhs:
+    anyOf:
+      - items:
+          - const: start_unmerge
+          - properties:
+              transaction_id:
+                type: string
+            type: object
+        type: array
 input_file: tests/fixtures/properties/add_property_in_array_of_any_of.json
 ---
 [
