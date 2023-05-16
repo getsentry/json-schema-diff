@@ -127,7 +127,7 @@ impl DiffWalker {
             for i in 0..len {
                 let new_path = match is_rhs_split {
                     true => json_path.to_owned(),
-                    false => format!("{json_path}.<anyOf:{i}>"),
+                    false => format!("{json_path}.<anyOf:{}>", pairs[i].1),
                 };
                 self.do_diff(
                     &new_path,
@@ -624,6 +624,7 @@ impl JsonSchemaExt for SchemaObject {
             self.subschemas()
                 .any_of
                 .as_ref()
+                .filter(|schemas| schemas.len() == 1)
                 .and_then(|a| a.get(0))
                 .map(|subschema| subschema.clone().into_object().number().clone())
                 .unwrap_or_default()
