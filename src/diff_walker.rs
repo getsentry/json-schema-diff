@@ -27,8 +27,14 @@ impl DiffWalker {
         if let (Some(lhs_any_of), Some(rhs_any_of)) =
             (&mut lhs.subschemas().any_of, &mut rhs.subschemas().any_of)
         {
-            lhs_any_of.sort_by_cached_key(|x| format!("{x:?}"));
-            rhs_any_of.sort_by_cached_key(|x| format!("{x:?}"));
+            match (lhs_any_of.len(), rhs_any_of.len()) {
+                (l, r) if l <= r => {
+                    lhs_any_of.append(&mut vec![Schema::Object(SchemaObject::default()); r - l]);
+                }
+                (l, r) => {
+                    rhs_any_of.append(&mut vec![Schema::Object(SchemaObject::default()); l - r]);
+                }
+            }
 
             for (i, (lhs_inner, rhs_inner)) in
                 lhs_any_of.iter_mut().zip(rhs_any_of.iter_mut()).enumerate()
