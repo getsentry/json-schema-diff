@@ -1,0 +1,19 @@
+{
+  "lhs": {
+    "anyOf": [
+      { "type": "boolean" },
+      {"properties": {"foo": {}}},
+      {"properties": {"type": {"const": "bar"}}}
+    ]
+  },
+  "rhs": {
+    "anyOf": [
+      {
+        "title": "replay_recording",
+        "type": "object",
+        "properties": {"foo": {}}
+      },
+      {"properties": {"type": {"const": "bar"}}}
+    ]
+  }
+}

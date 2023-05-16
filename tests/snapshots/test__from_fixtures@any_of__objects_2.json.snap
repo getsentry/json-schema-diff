@@ -1,0 +1,31 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    anyOf:
+      - properties:
+          foo: {}
+      - properties:
+          type:
+            const: bar
+  rhs:
+    anyOf:
+      - type: boolean
+      - properties:
+          foo: {}
+        title: replay_recording
+        type: object
+      - properties:
+          type:
+            const: bar
+input_file: tests/fixtures/any_of/objects_2.json
+---
+[
+    Change {
+        path: "",
+        change: TypeAdd {
+            added: Boolean,
+        },
+    },
+]

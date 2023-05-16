@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use schemars::schema::{
     InstanceType, NumberValidation, ObjectValidation, RootSchema, Schema, SchemaObject,
-    SingleOrVec, SubschemaValidation,
+    SingleOrVec, StringValidation, SubschemaValidation,
 };
 use serde_json::Value;
 
@@ -12,6 +12,81 @@ pub struct DiffWalker {
     pub changes: Vec<Change>,
     pub lhs_root: RootSchema,
     pub rhs_root: RootSchema,
+}
+
+trait DiffScore {
+    fn diff_score(&mut self, rhs: &mut Self) -> usize;
+}
+
+impl DiffScore for Schema {
+    fn diff_score(&mut self, rhs: &mut Self) -> usize {
+        self.clone()
+            .into_object()
+            .diff_score(&mut rhs.clone().into_object())
+    }
+}
+impl DiffScore for SchemaObject {
+    fn diff_score(&mut self, rhs: &mut Self) -> usize {
+        let mut score = 0;
+        if self.effective_type() != rhs.effective_type() {
+            score += 10;
+        }
+        score += self.number().diff_score(rhs.number())
+            + self.string().diff_score(rhs.string())
+            + self.object().diff_score(rhs.object());
+        score
+    }
+}
+
+impl DiffScore for NumberValidation {
+    fn diff_score(&mut self, rhs: &mut Self) -> usize {
+        let mut score = 0;
+        if self.multiple_of != rhs.multiple_of {
+            score += 1;
+        }
+        if self.minimum != rhs.minimum {
+            score += 1;
+        }
+        if self.maximum != rhs.maximum {
+            score += 1;
+        }
+        score
+    }
+}
+
+impl DiffScore for StringValidation {
+    fn diff_score(&mut self, rhs: &mut Self) -> usize {
+        let mut score = 0;
+        if self.pattern != rhs.pattern {
+            score += 1;
+        }
+        if self.min_length != rhs.min_length {
+            score += 1;
+        }
+        if self.max_length != rhs.max_length {
+            score += 1;
+        }
+        score
+    }
+}
+
+impl DiffScore for ObjectValidation {
+    fn diff_score(&mut self, rhs: &mut Self) -> usize {
+        let mut score = 0;
+        if self.required != rhs.required {
+            score += 1;
+        }
+        if self.properties != rhs.properties {
+            score += 1;
+        }
+        if self.pattern_properties != rhs.pattern_properties {
+            score += 1;
+        }
+        if self.additional_properties != rhs.additional_properties {
+            score += 1;
+        }
+        score
+    }
 }
 
 impl DiffWalker {
@@ -29,16 +104,27 @@ impl DiffWalker {
         {
             match (lhs_any_of.len(), rhs_any_of.len()) {
                 (l, r) if l <= r => {
-                    lhs_any_of.append(&mut vec![Schema::Object(SchemaObject::default()); r - l]);
+                    lhs_any_of.append(&mut vec![Schema::Bool(false); r - l]);
                 }
                 (l, r) => {
-                    rhs_any_of.append(&mut vec![Schema::Object(SchemaObject::default()); l - r]);
+                    rhs_any_of.append(&mut vec![Schema::Bool(false); l - r]);
                 }
             }
 
-            for (i, (lhs_inner, rhs_inner)) in
-                lhs_any_of.iter_mut().zip(rhs_any_of.iter_mut()).enumerate()
-            {
+            let mut mat = vec![];
+            let len = lhs_any_of.len();
+            lhs_any_of.iter_mut().for_each(|l| {
+                rhs_any_of
+                    .iter_mut()
+                    .for_each(|r| mat.push(l.diff_score(r)))
+            });
+            let pairs = hungarian::minimize(&mat, len, len)
+                .into_iter()
+                .enumerate()
+                .filter_map(|(i, j)| j.map(|j| (i, j)))
+                .collect::<Vec<_>>();
+
+            for i in 0..len {
                 let new_path = match is_rhs_split {
                     true => json_path.to_owned(),
                     false => format!("{json_path}.<anyOf:{i}>"),
@@ -46,8 +132,8 @@ impl DiffWalker {
                 self.do_diff(
                     &new_path,
                     true,
-                    &mut lhs_inner.clone().into_object(),
-                    &mut rhs_inner.clone().into_object(),
+                    &mut lhs_any_of[pairs[i].0].clone().into_object(),
+                    &mut rhs_any_of[pairs[i].1].clone().into_object(),
                 )?;
             }
         }
