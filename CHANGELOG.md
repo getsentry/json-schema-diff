@@ -1,4 +1,16 @@
 # Changelog and versioning
+## 0.1.6
+
+### Various fixes & improvements
+
+- support const keyword (#27) by @6293
+- include input values in snapshot for a smooth review (#28) by @6293
+- chore: consistent return type among methods (#29) by @6293
+- split testsuite into files (#24) by @6293
+- split multiple types into anyOf subschema (#20) by @6293
+- feat: Add support for changes to "required" properties (#19) by @lynnagara
+- doc: Remove feature list from README (#18) by @untitaker
+
 ## 0.1.5
 
 ### Various fixes & improvements
