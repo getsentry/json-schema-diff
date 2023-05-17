@@ -14,81 +14,6 @@ pub struct DiffWalker {
     pub rhs_root: RootSchema,
 }
 
-trait DiffScore {
-    fn diff_score(&mut self, rhs: &mut Self) -> usize;
-}
-
-impl DiffScore for Schema {
-    fn diff_score(&mut self, rhs: &mut Self) -> usize {
-        self.clone()
-            .into_object()
-            .diff_score(&mut rhs.clone().into_object())
-    }
-}
-impl DiffScore for SchemaObject {
-    fn diff_score(&mut self, rhs: &mut Self) -> usize {
-        let mut score = 0;
-        if self.effective_type() != rhs.effective_type() {
-            score += 10;
-        }
-        score += self.number().diff_score(rhs.number())
-            + self.string().diff_score(rhs.string())
-            + self.object().diff_score(rhs.object());
-        score
-    }
-}
-
-impl DiffScore for NumberValidation {
-    fn diff_score(&mut self, rhs: &mut Self) -> usize {
-        let mut score = 0;
-        if self.multiple_of != rhs.multiple_of {
-            score += 1;
-        }
-        if self.minimum != rhs.minimum {
-            score += 1;
-        }
-        if self.maximum != rhs.maximum {
-            score += 1;
-        }
-        score
-    }
-}
-
-impl DiffScore for StringValidation {
-    fn diff_score(&mut self, rhs: &mut Self) -> usize {
-        let mut score = 0;
-        if self.pattern != rhs.pattern {
-            score += 1;
-        }
-        if self.min_length != rhs.min_length {
-            score += 1;
-        }
-        if self.max_length != rhs.max_length {
-            score += 1;
-        }
-        score
-    }
-}
-
-impl DiffScore for ObjectValidation {
-    fn diff_score(&mut self, rhs: &mut Self) -> usize {
-        let mut score = 0;
-        if self.required != rhs.required {
-            score += 1;
-        }
-        if self.properties != rhs.properties {
-            score += 1;
-        }
-        if self.pattern_properties != rhs.pattern_properties {
-            score += 1;
-        }
-        if self.additional_properties != rhs.additional_properties {
-            score += 1;
-        }
-        score
-    }
-}
-
 impl DiffWalker {
     fn diff_any_of(
         &mut self,
@@ -113,11 +38,21 @@ impl DiffWalker {
 
             let mut mat = vec![];
             let len = lhs_any_of.len();
-            lhs_any_of.iter_mut().for_each(|l| {
-                rhs_any_of
-                    .iter_mut()
-                    .for_each(|r| mat.push(l.diff_score(r)))
-            });
+            for l in lhs_any_of.iter_mut() {
+                for r in rhs_any_of.iter_mut() {
+                    let mut walker = DiffWalker {
+                        changes: vec![],
+                        lhs_root: self.lhs_root.clone(),
+                        rhs_root: self.rhs_root.clone(),
+                    };
+                    walker.diff(
+                        "",
+                        &mut l.clone().into_object(),
+                        &mut r.clone().into_object(),
+                    )?;
+                    mat.push(walker.changes.len());
+                }
+            }
             let pairs = hungarian::minimize(&mat, len, len)
                 .into_iter()
                 .enumerate()
