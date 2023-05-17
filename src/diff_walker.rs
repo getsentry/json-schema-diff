@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use schemars::schema::{
     InstanceType, NumberValidation, ObjectValidation, RootSchema, Schema, SchemaObject,
-    SingleOrVec, StringValidation, SubschemaValidation,
+    SingleOrVec, SubschemaValidation,
 };
 use serde_json::Value;
 
@@ -36,10 +36,10 @@ impl DiffWalker {
                 }
             }
 
-            let mut mat = vec![];
             let len = lhs_any_of.len();
-            for l in lhs_any_of.iter_mut() {
-                for r in rhs_any_of.iter_mut() {
+            let mut mat = pathfinding::matrix::Matrix::new(len, len, 0i32);
+            for (i, l) in lhs_any_of.iter_mut().enumerate() {
+                for (j, r) in rhs_any_of.iter_mut().enumerate() {
                     let mut walker = DiffWalker {
                         changes: vec![],
                         lhs_root: self.lhs_root.clone(),
@@ -50,25 +50,20 @@ impl DiffWalker {
                         &mut l.clone().into_object(),
                         &mut r.clone().into_object(),
                     )?;
-                    mat.push(walker.changes.len());
+                    mat[(i, j)] = i32::try_from(walker.changes.len()).expect("too many changes");
                 }
             }
-            let pairs = hungarian::minimize(&mat, len, len)
-                .into_iter()
-                .enumerate()
-                .filter_map(|(i, j)| j.map(|j| (i, j)))
-                .collect::<Vec<_>>();
-
+            let pairs = pathfinding::kuhn_munkres::kuhn_munkres_min(&mat).1;
             for i in 0..len {
                 let new_path = match is_rhs_split {
                     true => json_path.to_owned(),
-                    false => format!("{json_path}.<anyOf:{}>", pairs[i].1),
+                    false => format!("{json_path}.<anyOf:{}>", pairs[i]),
                 };
                 self.do_diff(
                     &new_path,
                     true,
-                    &mut lhs_any_of[pairs[i].0].clone().into_object(),
-                    &mut rhs_any_of[pairs[i].1].clone().into_object(),
+                    &mut lhs_any_of[i].clone().into_object(),
+                    &mut rhs_any_of[pairs[i]].clone().into_object(),
                 )?;
             }
         }
