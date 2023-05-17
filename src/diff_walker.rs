@@ -8,13 +8,25 @@ use serde_json::Value;
 
 use crate::{Change, ChangeKind, Error, JsonSchemaType, Range};
 
-pub struct DiffWalker {
-    pub changes: Vec<Change>,
+pub struct DiffWalker<'cb> {
+    pub cb: Box<dyn FnMut(Change) + 'cb>,
     pub lhs_root: RootSchema,
     pub rhs_root: RootSchema,
 }
 
-impl DiffWalker {
+impl<'cb> DiffWalker<'cb> {
+    pub fn new(
+        cb: Box<dyn FnMut(Change) + 'cb>,
+        lhs_root: RootSchema,
+        rhs_root: RootSchema,
+    ) -> Self {
+        Self {
+            cb,
+            lhs_root,
+            rhs_root,
+        }
+    }
+
     fn diff_any_of(
         &mut self,
         json_path: &str,
@@ -42,17 +54,19 @@ impl DiffWalker {
             let mut mat = pathfinding::matrix::Matrix::new(max_len, max_len, 0i32);
             for (i, l) in lhs_any_of.iter_mut().enumerate() {
                 for (j, r) in rhs_any_of.iter_mut().enumerate() {
-                    let mut walker = DiffWalker {
-                        changes: vec![],
-                        lhs_root: self.lhs_root.clone(),
-                        rhs_root: self.rhs_root.clone(),
-                    };
-                    walker.diff(
+                    let mut count = 0;
+                    let counter = |_change: Change| count += 1;
+                    DiffWalker::new(
+                        Box::new(counter),
+                        self.lhs_root.clone(),
+                        self.rhs_root.clone(),
+                    )
+                    .diff(
                         "",
                         &mut l.clone().into_object(),
                         &mut r.clone().into_object(),
                     )?;
-                    mat[(i, j)] = i32::try_from(walker.changes.len()).expect("too many changes");
+                    mat[(i, j)] = count;
                 }
             }
             let pairs = pathfinding::kuhn_munkres::kuhn_munkres_min(&mat).1;
@@ -83,7 +97,7 @@ impl DiffWalker {
         let rhs_ty = rhs.effective_type().into_set();
 
         for removed in lhs_ty.difference(&rhs_ty) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::TypeRemove {
                     removed: removed.clone(),
@@ -92,7 +106,7 @@ impl DiffWalker {
         }
 
         for added in rhs_ty.difference(&lhs_ty) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::TypeAdd {
                     added: added.clone(),
@@ -105,13 +119,13 @@ impl DiffWalker {
         Self::normalize_const(lhs);
         Self::normalize_const(rhs);
         match (&lhs.const_value, &rhs.const_value) {
-            (Some(value), None) => self.changes.push(Change {
+            (Some(value), None) => (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::ConstRemove {
                     removed: value.clone(),
                 },
             }),
-            (None, Some(value)) => self.changes.push(Change {
+            (None, Some(value)) => (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::ConstAdd {
                     added: value.clone(),
@@ -119,11 +133,11 @@ impl DiffWalker {
             }),
             (Some(l), Some(r)) if l != r => {
                 if l.is_object() && r.is_object() {}
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ConstRemove { removed: l.clone() },
                 });
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ConstAdd { added: r.clone() },
                 });
@@ -148,7 +162,7 @@ impl DiffWalker {
             .map_or(true, |x| x.clone().into_object().is_true());
 
         for removed in lhs_props.difference(&rhs_props) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::PropertyRemove {
                     lhs_additional_properties,
@@ -158,7 +172,7 @@ impl DiffWalker {
         }
 
         for added in rhs_props.difference(&lhs_props) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::PropertyAdd {
                     lhs_additional_properties,
@@ -242,14 +256,14 @@ impl DiffWalker {
             rhs.number_validation().minimum,
             Range::Minimum,
         ) {
-            self.changes.push(diff)
+            (self.cb)(diff)
         }
         if let Some(diff) = diff(
             lhs.number_validation().maximum,
             rhs.number_validation().maximum,
             Range::Maximum,
         ) {
-            self.changes.push(diff)
+            (self.cb)(diff)
         }
         Ok(())
     }
@@ -263,7 +277,7 @@ impl DiffWalker {
         match (&lhs.array().items, &rhs.array().items) {
             (Some(SingleOrVec::Vec(lhs_items)), Some(SingleOrVec::Vec(rhs_items))) => {
                 if lhs_items.len() != rhs_items.len() {
-                    self.changes.push(Change {
+                    (self.cb)(Change {
                         path: json_path.to_owned(),
                         change: ChangeKind::TupleChange {
                             new_length: rhs_items.len(),
@@ -291,7 +305,7 @@ impl DiffWalker {
                 )?;
             }
             (Some(SingleOrVec::Single(lhs_inner)), Some(SingleOrVec::Vec(rhs_items))) => {
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ArrayToTuple {
                         new_length: rhs_items.len(),
@@ -308,7 +322,7 @@ impl DiffWalker {
                 }
             }
             (Some(SingleOrVec::Vec(lhs_items)), Some(SingleOrVec::Single(rhs_inner))) => {
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::TupleToArray {
                         old_length: lhs_items.len(),
@@ -345,7 +359,7 @@ impl DiffWalker {
         let rhs_required = &rhs.object().required;
 
         for removed in lhs_required.difference(rhs_required) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RequiredRemove {
                     property: removed.clone(),
@@ -354,7 +368,7 @@ impl DiffWalker {
         }
 
         for added in rhs_required.difference(lhs_required) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RequiredAdd {
                     property: added.clone(),
