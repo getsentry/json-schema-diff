@@ -8,13 +8,21 @@ use serde_json::Value;
 
 use crate::{Change, ChangeKind, Error, JsonSchemaType, Range};
 
-pub struct DiffWalker {
-    pub changes: Vec<Change>,
+pub struct DiffWalker<F: FnMut(Change)> {
+    pub cb: F,
     pub lhs_root: RootSchema,
     pub rhs_root: RootSchema,
 }
 
-impl DiffWalker {
+impl<F: FnMut(Change)> DiffWalker<F> {
+    pub fn new(cb: F, lhs_root: RootSchema, rhs_root: RootSchema) -> Self {
+        Self {
+            cb,
+            lhs_root,
+            rhs_root,
+        }
+    }
+
     fn diff_any_of(
         &mut self,
         json_path: &str,
@@ -27,21 +35,47 @@ impl DiffWalker {
         if let (Some(lhs_any_of), Some(rhs_any_of)) =
             (&mut lhs.subschemas().any_of, &mut rhs.subschemas().any_of)
         {
-            lhs_any_of.sort_by_cached_key(|x| format!("{x:?}"));
-            rhs_any_of.sort_by_cached_key(|x| format!("{x:?}"));
+            match (lhs_any_of.len(), rhs_any_of.len()) {
+                (l, r) if l <= r => {
+                    lhs_any_of.append(&mut vec![Schema::Bool(false); r - l]);
+                }
+                (l, r) => {
+                    rhs_any_of.append(&mut vec![Schema::Bool(false); l - r]);
+                }
+            }
+            let max_len = lhs_any_of.len().max(rhs_any_of.len());
+            lhs_any_of.resize(max_len, Schema::Bool(false));
+            rhs_any_of.resize(max_len, Schema::Bool(false));
 
-            for (i, (lhs_inner, rhs_inner)) in
-                lhs_any_of.iter_mut().zip(rhs_any_of.iter_mut()).enumerate()
-            {
+            let mut mat = pathfinding::matrix::Matrix::new(max_len, max_len, 0i32);
+            for (i, l) in lhs_any_of.iter_mut().enumerate() {
+                for (j, r) in rhs_any_of.iter_mut().enumerate() {
+                    let mut count = 0;
+                    let counter = |_change: Change| count += 1;
+                    DiffWalker::new(
+                        Box::new(counter) as Box<dyn FnMut(Change)>,
+                        self.lhs_root.clone(),
+                        self.rhs_root.clone(),
+                    )
+                    .diff(
+                        "",
+                        &mut l.clone().into_object(),
+                        &mut r.clone().into_object(),
+                    )?;
+                    mat[(i, j)] = count;
+                }
+            }
+            let pairs = pathfinding::kuhn_munkres::kuhn_munkres_min(&mat).1;
+            for i in 0..max_len {
                 let new_path = match is_rhs_split {
                     true => json_path.to_owned(),
-                    false => format!("{json_path}.<anyOf:{i}>"),
+                    false => format!("{json_path}.<anyOf:{}>", pairs[i]),
                 };
                 self.do_diff(
                     &new_path,
                     true,
-                    &mut lhs_inner.clone().into_object(),
-                    &mut rhs_inner.clone().into_object(),
+                    &mut lhs_any_of[i].clone().into_object(),
+                    &mut rhs_any_of[pairs[i]].clone().into_object(),
                 )?;
             }
         }
@@ -59,7 +93,7 @@ impl DiffWalker {
         let rhs_ty = rhs.effective_type().into_set();
 
         for removed in lhs_ty.difference(&rhs_ty) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::TypeRemove {
                     removed: removed.clone(),
@@ -68,7 +102,7 @@ impl DiffWalker {
         }
 
         for added in rhs_ty.difference(&lhs_ty) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::TypeAdd {
                     added: added.clone(),
@@ -81,13 +115,13 @@ impl DiffWalker {
         Self::normalize_const(lhs);
         Self::normalize_const(rhs);
         match (&lhs.const_value, &rhs.const_value) {
-            (Some(value), None) => self.changes.push(Change {
+            (Some(value), None) => (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::ConstRemove {
                     removed: value.clone(),
                 },
             }),
-            (None, Some(value)) => self.changes.push(Change {
+            (None, Some(value)) => (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::ConstAdd {
                     added: value.clone(),
@@ -95,11 +129,11 @@ impl DiffWalker {
             }),
             (Some(l), Some(r)) if l != r => {
                 if l.is_object() && r.is_object() {}
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ConstRemove { removed: l.clone() },
                 });
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ConstAdd { added: r.clone() },
                 });
@@ -124,7 +158,7 @@ impl DiffWalker {
             .map_or(true, |x| x.clone().into_object().is_true());
 
         for removed in lhs_props.difference(&rhs_props) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::PropertyRemove {
                     lhs_additional_properties,
@@ -134,7 +168,7 @@ impl DiffWalker {
         }
 
         for added in rhs_props.difference(&lhs_props) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::PropertyAdd {
                     lhs_additional_properties,
@@ -218,14 +252,14 @@ impl DiffWalker {
             rhs.number_validation().minimum,
             Range::Minimum,
         ) {
-            self.changes.push(diff)
+            (self.cb)(diff)
         }
         if let Some(diff) = diff(
             lhs.number_validation().maximum,
             rhs.number_validation().maximum,
             Range::Maximum,
         ) {
-            self.changes.push(diff)
+            (self.cb)(diff)
         }
         Ok(())
     }
@@ -239,7 +273,7 @@ impl DiffWalker {
         match (&lhs.array().items, &rhs.array().items) {
             (Some(SingleOrVec::Vec(lhs_items)), Some(SingleOrVec::Vec(rhs_items))) => {
                 if lhs_items.len() != rhs_items.len() {
-                    self.changes.push(Change {
+                    (self.cb)(Change {
                         path: json_path.to_owned(),
                         change: ChangeKind::TupleChange {
                             new_length: rhs_items.len(),
@@ -267,7 +301,7 @@ impl DiffWalker {
                 )?;
             }
             (Some(SingleOrVec::Single(lhs_inner)), Some(SingleOrVec::Vec(rhs_items))) => {
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ArrayToTuple {
                         new_length: rhs_items.len(),
@@ -284,7 +318,7 @@ impl DiffWalker {
                 }
             }
             (Some(SingleOrVec::Vec(lhs_items)), Some(SingleOrVec::Single(rhs_inner))) => {
-                self.changes.push(Change {
+                (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::TupleToArray {
                         old_length: lhs_items.len(),
@@ -321,7 +355,7 @@ impl DiffWalker {
         let rhs_required = &rhs.object().required;
 
         for removed in lhs_required.difference(rhs_required) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RequiredRemove {
                     property: removed.clone(),
@@ -330,7 +364,7 @@ impl DiffWalker {
         }
 
         for added in rhs_required.difference(lhs_required) {
-            self.changes.push(Change {
+            (self.cb)(Change {
                 path: json_path.to_owned(),
                 change: ChangeKind::RequiredAdd {
                     property: added.clone(),
@@ -532,6 +566,7 @@ impl JsonSchemaExt for SchemaObject {
             self.subschemas()
                 .any_of
                 .as_ref()
+                .filter(|schemas| schemas.len() == 1)
                 .and_then(|a| a.get(0))
                 .map(|subschema| subschema.clone().into_object().number().clone())
                 .unwrap_or_default()

@@ -1,0 +1,16 @@
+{
+  "lhs": {
+    "anyOf": [
+      {"type": "number", "maximum": 10},
+      {"type": "number", "minimum": 1},
+      {"type": "number", "minimum": 100, "maximum": 200}
+    ]
+  },
+  "rhs": {
+    "anyOf": [
+      {"type": "number", "minimum": 7, "maximum": 14},
+      {"type": "number", "maximum": 3},
+      {"type": "number", "minimum": 2}
+    ]
+  }
+}
