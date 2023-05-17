@@ -8,15 +8,16 @@ use serde_json::Value;
 
 use crate::{Change, ChangeKind, Error, JsonSchemaType, Range};
 
-pub struct DiffWalker<'cb> {
-    pub cb: Box<dyn FnMut(Change) + 'cb>,
+pub struct DiffWalker<F: FnMut(Change)> {
+    pub cb: F,
     pub lhs_root: RootSchema,
     pub rhs_root: RootSchema,
 }
 
-impl<'cb> DiffWalker<'cb> {
+
+impl<F: FnMut(Change)> DiffWalker<F> {
     pub fn new(
-        cb: Box<dyn FnMut(Change) + 'cb>,
+        cb: F,
         lhs_root: RootSchema,
         rhs_root: RootSchema,
     ) -> Self {
@@ -57,7 +58,7 @@ impl<'cb> DiffWalker<'cb> {
                     let mut count = 0;
                     let counter = |_change: Change| count += 1;
                     DiffWalker::new(
-                        Box::new(counter),
+                        Box::new(counter) as Box<dyn FnMut(Change)>,
                         self.lhs_root.clone(),
                         self.rhs_root.clone(),
                     )
