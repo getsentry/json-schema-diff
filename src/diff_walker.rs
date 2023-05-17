@@ -35,9 +35,11 @@ impl DiffWalker {
                     rhs_any_of.append(&mut vec![Schema::Bool(false); l - r]);
                 }
             }
+            let max_len = lhs_any_of.len().max(rhs_any_of.len());
+            lhs_any_of.resize(max_len, Schema::Bool(false));
+            rhs_any_of.resize(max_len, Schema::Bool(false));
 
-            let len = lhs_any_of.len();
-            let mut mat = pathfinding::matrix::Matrix::new(len, len, 0i32);
+            let mut mat = pathfinding::matrix::Matrix::new(max_len, max_len, 0i32);
             for (i, l) in lhs_any_of.iter_mut().enumerate() {
                 for (j, r) in rhs_any_of.iter_mut().enumerate() {
                     let mut walker = DiffWalker {
@@ -54,7 +56,7 @@ impl DiffWalker {
                 }
             }
             let pairs = pathfinding::kuhn_munkres::kuhn_munkres_min(&mat).1;
-            for i in 0..len {
+            for i in 0..max_len {
                 let new_path = match is_rhs_split {
                     true => json_path.to_owned(),
                     false => format!("{json_path}.<anyOf:{}>", pairs[i]),
