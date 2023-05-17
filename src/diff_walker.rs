@@ -14,13 +14,8 @@ pub struct DiffWalker<F: FnMut(Change)> {
     pub rhs_root: RootSchema,
 }
 
-
 impl<F: FnMut(Change)> DiffWalker<F> {
-    pub fn new(
-        cb: F,
-        lhs_root: RootSchema,
-        rhs_root: RootSchema,
-    ) -> Self {
+    pub fn new(cb: F, lhs_root: RootSchema, rhs_root: RootSchema) -> Self {
         Self {
             cb,
             lhs_root,
