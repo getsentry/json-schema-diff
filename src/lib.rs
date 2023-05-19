@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
-use schemars::schema::RootSchema;
+use schemars::schema::{RootSchema, Schema};
 use serde_json::Value;
 use thiserror::Error;
 
@@ -27,8 +27,8 @@ pub fn diff(lhs: Value, rhs: Value) -> Result<Vec<Change>, Error> {
     );
     walker.diff(
         "",
-        &mut walker.lhs_root.schema.clone(),
-        &mut walker.rhs_root.schema.clone(),
+        &mut Schema::Object(walker.lhs_root.schema.clone()),
+        &mut Schema::Object(walker.rhs_root.schema.clone()),
     )?;
     Ok(changes)
 }
