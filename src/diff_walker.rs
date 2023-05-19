@@ -35,14 +35,6 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         if let (Some(lhs_any_of), Some(rhs_any_of)) =
             (&mut lhs.subschemas().any_of, &mut rhs.subschemas().any_of)
         {
-            match (lhs_any_of.len(), rhs_any_of.len()) {
-                (l, r) if l <= r => {
-                    lhs_any_of.append(&mut vec![Schema::Bool(false); r - l]);
-                }
-                (l, r) => {
-                    rhs_any_of.append(&mut vec![Schema::Bool(false); l - r]);
-                }
-            }
             let max_len = lhs_any_of.len().max(rhs_any_of.len());
             lhs_any_of.resize(max_len, Schema::Bool(false));
             rhs_any_of.resize(max_len, Schema::Bool(false));
@@ -57,11 +49,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                         self.lhs_root.clone(),
                         self.rhs_root.clone(),
                     )
-                    .diff(
-                        "",
-                        &mut l.clone().into_object(),
-                        &mut r.clone().into_object(),
-                    )?;
+                    .diff("", l, r)?;
                     mat[(i, j)] = count;
                 }
             }
@@ -178,15 +166,11 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         }
 
         for common in rhs_props.intersection(&lhs_props) {
-            let lhs_child = lhs.object().properties.get(common.as_str()).unwrap();
-            let rhs_child = rhs.object().properties.get(common.as_str()).unwrap();
+            let lhs_child = lhs.object().properties.get_mut(common.as_str()).unwrap();
+            let rhs_child = rhs.object().properties.get_mut(common.as_str()).unwrap();
 
             let new_path = format!("{json_path}.{common}");
-            self.diff(
-                &new_path,
-                &mut lhs_child.clone().into_object(),
-                &mut rhs_child.clone().into_object(),
-            )?;
+            self.diff(&new_path, lhs_child, rhs_child)?;
         }
 
         Ok(())
@@ -198,17 +182,17 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        if let (Some(ref lhs_additional_properties), Some(ref rhs_additional_properties)) = (
-            &lhs.object().additional_properties,
-            &rhs.object().additional_properties,
+        if let (Some(lhs_additional_properties), Some(rhs_additional_properties)) = (
+            &mut lhs.object().additional_properties,
+            &mut rhs.object().additional_properties,
         ) {
             if rhs_additional_properties != lhs_additional_properties {
                 let new_path = format!("{json_path}.<additionalProperties>");
 
                 self.diff(
                     &new_path,
-                    &mut lhs_additional_properties.clone().into_object(),
-                    &mut rhs_additional_properties.clone().into_object(),
+                    lhs_additional_properties,
+                    rhs_additional_properties,
                 )?;
             }
         }
@@ -270,7 +254,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        match (&lhs.array().items, &rhs.array().items) {
+        match (&mut lhs.array().items, &mut rhs.array().items) {
             (Some(SingleOrVec::Vec(lhs_items)), Some(SingleOrVec::Vec(rhs_items))) => {
                 if lhs_items.len() != rhs_items.len() {
                     (self.cb)(Change {
@@ -282,23 +266,15 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                 }
 
                 for (i, (lhs_inner, rhs_inner)) in
-                    lhs_items.iter().zip(rhs_items.iter()).enumerate()
+                    lhs_items.iter_mut().zip(rhs_items.iter_mut()).enumerate()
                 {
                     let new_path = format!("{json_path}.{i}");
-                    self.diff(
-                        &new_path,
-                        &mut lhs_inner.clone().into_object(),
-                        &mut rhs_inner.clone().into_object(),
-                    )?;
+                    self.diff(&new_path, lhs_inner, rhs_inner)?;
                 }
             }
             (Some(SingleOrVec::Single(lhs_inner)), Some(SingleOrVec::Single(rhs_inner))) => {
                 let new_path = format!("{json_path}.?");
-                self.diff(
-                    &new_path,
-                    &mut lhs_inner.clone().into_object(),
-                    &mut rhs_inner.clone().into_object(),
-                )?;
+                self.diff(&new_path, lhs_inner, rhs_inner)?;
             }
             (Some(SingleOrVec::Single(lhs_inner)), Some(SingleOrVec::Vec(rhs_items))) => {
                 (self.cb)(Change {
@@ -308,13 +284,9 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                     },
                 });
 
-                for (i, rhs_inner) in rhs_items.iter().enumerate() {
+                for (i, rhs_inner) in rhs_items.iter_mut().enumerate() {
                     let new_path = format!("{json_path}.{i}");
-                    self.diff(
-                        &new_path,
-                        &mut lhs_inner.clone().into_object(),
-                        &mut rhs_inner.clone().into_object(),
-                    )?;
+                    self.diff(&new_path, lhs_inner, rhs_inner)?;
                 }
             }
             (Some(SingleOrVec::Vec(lhs_items)), Some(SingleOrVec::Single(rhs_inner))) => {
@@ -325,13 +297,9 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                     },
                 });
 
-                for (i, lhs_inner) in lhs_items.iter().enumerate() {
+                for (i, lhs_inner) in lhs_items.iter_mut().enumerate() {
                     let new_path = format!("{json_path}.{i}");
-                    self.diff(
-                        &new_path,
-                        &mut lhs_inner.clone().into_object(),
-                        &mut rhs_inner.clone().into_object(),
-                    )?;
+                    self.diff(&new_path, lhs_inner, rhs_inner)?;
                 }
             }
             (None, None) => (),
@@ -507,10 +475,24 @@ impl<F: FnMut(Change)> DiffWalker<F> {
     pub fn diff(
         &mut self,
         json_path: &str,
-        lhs: &mut SchemaObject,
-        rhs: &mut SchemaObject,
+        lhs: &mut Schema,
+        rhs: &mut Schema,
     ) -> Result<(), Error> {
-        self.do_diff(json_path, false, lhs, rhs)
+        match (lhs, rhs) {
+            (Schema::Object(lhs), Schema::Object(rhs)) => self.do_diff(json_path, false, lhs, rhs),
+            (bool_lhs, Schema::Object(rhs)) => {
+                self.do_diff(json_path, false, &mut bool_lhs.clone().into_object(), rhs)
+            }
+            (Schema::Object(lhs), bool_rhs) => {
+                self.do_diff(json_path, false, lhs, &mut bool_rhs.clone().into_object())
+            }
+            (bool_lhs, bool_rhs) => self.do_diff(
+                json_path,
+                false,
+                &mut bool_lhs.clone().into_object(),
+                &mut bool_rhs.clone().into_object(),
+            ),
+        }
     }
 }
 
