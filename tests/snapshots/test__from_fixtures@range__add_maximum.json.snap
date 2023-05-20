@@ -13,8 +13,9 @@ input_file: tests/fixtures/range/add_maximum.json
     Change {
         path: "",
         change: RangeAdd {
-            added: Maximum,
-            value: 1.0,
+            added: Maximum(
+                1.0,
+            ),
         },
     },
 ]

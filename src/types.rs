@@ -54,26 +54,20 @@ pub enum ChangeKind {
     },
     /// A minimum/maximum constraint has been added.
     RangeAdd {
-        /// The name of the added constraint.
-        added: Range,
         /// The value of the added constraint.
-        value: f64,
+        added: Range,
     },
     /// A minimum/maximum constraint has been removed.
     RangeRemove {
-        /// The name of the removed constraint.
-        removed: Range,
         /// The value of the removed constraint.
-        value: f64,
+        removed: Range,
     },
     /// A minimum/maximum constraint has been updated.
     RangeChange {
-        /// The name of the changed constraint.
-        changed: Range,
         /// The old constraint value.
-        old_value: f64,
+        old_value: Range,
         /// The new constraint value.
-        new_value: f64,
+        new_value: Range,
     },
     /// An array-type item has been changed from tuple validation to array validation.
     ///
@@ -140,13 +134,16 @@ impl ChangeKind {
             Self::RangeAdd { .. } => true,
             Self::RangeRemove { .. } => false,
             Self::RangeChange {
-                changed,
-                old_value: lhs_value,
-                new_value: rhs_value,
-            } => match changed {
-                Range::Minimum if lhs_value < rhs_value => true,
-                Range::Maximum if lhs_value > rhs_value => true,
-                _ => false,
+                old_value,
+                new_value,
+            } => match (old_value, new_value) {
+                (Range::ExclusiveMinimum(exc), Range::Minimum(min)) if exc >= min => false,
+                (Range::ExclusiveMaximum(exc), Range::Maximum(max)) if exc <= max => false,
+                (Range::Minimum(l), Range::Minimum(r)) if l >= r => false,
+                (Range::ExclusiveMinimum(l), Range::ExclusiveMinimum(r)) if l >= r => false,
+                (Range::Maximum(l), Range::Maximum(r)) if l <= r => false,
+                (Range::ExclusiveMaximum(l), Range::ExclusiveMaximum(r)) if l <= r => false,
+                _ => true,
             },
             Self::TupleToArray { .. } => false,
             Self::ArrayToTuple { .. } => true,
@@ -217,11 +214,127 @@ impl From<InstanceType> for JsonSchemaType {
 }
 
 /// Range constraints in JSON schema.
-#[derive(Serialize, Clone, Ord, Eq, PartialEq, PartialOrd, Debug)]
+#[derive(Serialize, Clone, PartialEq, PartialOrd, Debug)]
+#[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub enum Range {
-    #[serde(rename = "minimum")]
-    Minimum,
-    #[serde(rename = "maximum")]
-    Maximum,
+    Minimum(f64),
+    Maximum(f64),
+    ExclusiveMinimum(f64),
+    ExclusiveMaximum(f64),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn is_range_change_breaking() {
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::Minimum(1.0),
+            new_value: Range::Minimum(1.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Minimum(1.0),
+            new_value: Range::Minimum(2.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::Minimum(2.0),
+            new_value: Range::Minimum(1.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Minimum(1.0),
+            new_value: Range::ExclusiveMinimum(1.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Minimum(1.0),
+            new_value: Range::ExclusiveMinimum(2.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Minimum(2.0),
+            new_value: Range::ExclusiveMinimum(1.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::ExclusiveMinimum(1.0),
+            new_value: Range::ExclusiveMinimum(1.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::ExclusiveMinimum(1.0),
+            new_value: Range::ExclusiveMinimum(2.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::ExclusiveMinimum(2.0),
+            new_value: Range::ExclusiveMinimum(1.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::Maximum(1.0),
+            new_value: Range::Maximum(1.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::Maximum(1.0),
+            new_value: Range::Maximum(2.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Maximum(2.0),
+            new_value: Range::Maximum(1.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Maximum(1.0),
+            new_value: Range::ExclusiveMaximum(1.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Maximum(1.0),
+            new_value: Range::ExclusiveMaximum(2.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::Maximum(2.0),
+            new_value: Range::ExclusiveMaximum(1.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::ExclusiveMaximum(1.0),
+            new_value: Range::ExclusiveMaximum(1.0),
+        }
+        .is_breaking());
+
+        assert!(!ChangeKind::RangeChange {
+            old_value: Range::ExclusiveMaximum(1.0),
+            new_value: Range::ExclusiveMaximum(2.0),
+        }
+        .is_breaking());
+
+        assert!(ChangeKind::RangeChange {
+            old_value: Range::ExclusiveMaximum(2.0),
+            new_value: Range::ExclusiveMaximum(1.0),
+        }
+        .is_breaking());
+    }
 }

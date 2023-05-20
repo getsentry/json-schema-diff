@@ -13,8 +13,9 @@ input_file: tests/fixtures/range/remove_minimum.json
     Change {
         path: "",
         change: RangeRemove {
-            removed: Minimum,
-            value: 1.0,
+            removed: Minimum(
+                1.0,
+            ),
         },
     },
 ]

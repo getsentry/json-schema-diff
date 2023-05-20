@@ -26,33 +26,45 @@ input_file: tests/fixtures/any_of/number_1.json
     Change {
         path: ".<anyOf:1>",
         change: RangeChange {
-            changed: Maximum,
-            old_value: 10.0,
-            new_value: 3.0,
+            old_value: Maximum(
+                10.0,
+            ),
+            new_value: Maximum(
+                3.0,
+            ),
         },
     },
     Change {
         path: ".<anyOf:2>",
         change: RangeChange {
-            changed: Minimum,
-            old_value: 1.0,
-            new_value: 2.0,
+            old_value: Minimum(
+                1.0,
+            ),
+            new_value: Minimum(
+                2.0,
+            ),
         },
     },
     Change {
         path: ".<anyOf:0>",
         change: RangeChange {
-            changed: Minimum,
-            old_value: 100.0,
-            new_value: 7.0,
+            old_value: Minimum(
+                100.0,
+            ),
+            new_value: Minimum(
+                7.0,
+            ),
         },
     },
     Change {
         path: ".<anyOf:0>",
         change: RangeChange {
-            changed: Maximum,
-            old_value: 200.0,
-            new_value: 14.0,
+            old_value: Maximum(
+                200.0,
+            ),
+            new_value: Maximum(
+                14.0,
+            ),
         },
     },
 ]

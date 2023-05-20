@@ -3,22 +3,23 @@ source: tests/test.rs
 expression: diff
 info:
   lhs:
+    exclusiveMinimum: 1
     minimum: 1
     type: number
   rhs:
-    minimum: 1.3
+    exclusiveMinimum: 0.4
     type: number
-input_file: tests/fixtures/range/change_minimum.json
+input_file: tests/fixtures/range/redundant_minimum_1.json
 ---
 [
     Change {
         path: "",
         change: RangeChange {
-            old_value: Minimum(
+            old_value: ExclusiveMinimum(
                 1.0,
             ),
-            new_value: Minimum(
-                1.3,
+            new_value: ExclusiveMinimum(
+                0.4,
             ),
         },
     },

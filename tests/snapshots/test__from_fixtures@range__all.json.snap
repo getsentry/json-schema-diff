@@ -3,14 +3,12 @@ source: tests/test.rs
 expression: diff
 info:
   lhs:
-    maximum: 2
+    exclusiveMaximum: 100
     minimum: 1
-    type: number
   rhs:
-    maximum: 2.5
-    minimum: 1.5
-    type: number
-input_file: tests/fixtures/range/change_minimum_and_maximum.json
+    exclusiveMinimum: 3
+    maximum: 30
+input_file: tests/fixtures/range/all.json
 ---
 [
     Change {
@@ -19,19 +17,19 @@ input_file: tests/fixtures/range/change_minimum_and_maximum.json
             old_value: Minimum(
                 1.0,
             ),
-            new_value: Minimum(
-                1.5,
+            new_value: ExclusiveMinimum(
+                3.0,
             ),
         },
     },
     Change {
         path: "",
         change: RangeChange {
-            old_value: Maximum(
-                2.0,
+            old_value: ExclusiveMaximum(
+                100.0,
             ),
             new_value: Maximum(
-                2.5,
+                30.0,
             ),
         },
     },

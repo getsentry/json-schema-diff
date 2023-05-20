@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::mem::discriminant;
 
 use schemars::schema::{
     InstanceType, NumberValidation, ObjectValidation, RootSchema, Schema, SchemaObject,
@@ -206,45 +207,51 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        let diff = |lhs, rhs, range| match (lhs, rhs) {
-            (None, Some(value)) => Some(Change {
+        let mut diff = |lhs, rhs| match (lhs, rhs) {
+            (None, Some(value)) => (self.cb)(Change {
                 path: json_path.to_owned(),
-                change: ChangeKind::RangeAdd {
-                    added: range,
-                    value,
-                },
+                change: ChangeKind::RangeAdd { added: value },
             }),
-            (Some(value), None) => Some(Change {
+            (Some(value), None) => (self.cb)(Change {
                 path: json_path.to_owned(),
-                change: ChangeKind::RangeRemove {
-                    removed: range,
-                    value,
-                },
+                change: ChangeKind::RangeRemove { removed: value },
             }),
-            (Some(lhs), Some(rhs)) if lhs != rhs => Some(Change {
-                path: json_path.to_owned(),
-                change: ChangeKind::RangeChange {
-                    changed: range,
-                    old_value: lhs,
-                    new_value: rhs,
-                },
-            }),
+            (Some(lhs), Some(rhs))
+                if (lhs != rhs && discriminant(&lhs) == discriminant(&rhs))
+                    || discriminant(&lhs) != discriminant(&rhs) =>
+            {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::RangeChange {
+                        old_value: lhs,
+                        new_value: rhs,
+                    },
+                })
+            }
+            _ => (),
+        };
+        let choose_min = |schema: &mut SchemaObject| match (
+            schema.number_validation().minimum,
+            schema.number_validation().exclusive_minimum,
+        ) {
+            (Some(min), None) => Some(Range::Minimum(min)),
+            (None, Some(exc)) => Some(Range::ExclusiveMinimum(exc)),
+            (Some(min), Some(exc)) if min <= exc => Some(Range::ExclusiveMinimum(exc)),
+            (Some(min), Some(exc)) if min > exc => Some(Range::Minimum(min)),
             _ => None,
         };
-        if let Some(diff) = diff(
-            lhs.number_validation().minimum,
-            rhs.number_validation().minimum,
-            Range::Minimum,
+        let choose_max = |schema: &mut SchemaObject| match (
+            schema.number_validation().maximum,
+            schema.number_validation().exclusive_maximum,
         ) {
-            (self.cb)(diff)
-        }
-        if let Some(diff) = diff(
-            lhs.number_validation().maximum,
-            rhs.number_validation().maximum,
-            Range::Maximum,
-        ) {
-            (self.cb)(diff)
-        }
+            (Some(max), None) => Some(Range::Maximum(max)),
+            (None, Some(exc)) => Some(Range::ExclusiveMaximum(exc)),
+            (Some(max), Some(exc)) if max >= exc => Some(Range::ExclusiveMaximum(exc)),
+            (Some(max), Some(exc)) if max < exc => Some(Range::Maximum(max)),
+            _ => None,
+        };
+        diff(choose_min(lhs), choose_min(rhs));
+        diff(choose_max(lhs), choose_max(rhs));
         Ok(())
     }
 

@@ -3,14 +3,12 @@ source: tests/test.rs
 expression: diff
 info:
   lhs:
-    anyOf:
-      - minimum: 1
-        type: integer
+    minimum: 1
+    type: number
   rhs:
-    type:
-      - integer
-      - string
-input_file: tests/fixtures/any_of/any_of_with_constraint_to_type_1.json
+    exclusiveMaximum: 1
+    type: number
+input_file: tests/fixtures/range/minimum_to_exclusive_maximum.json
 ---
 [
     Change {
@@ -23,8 +21,10 @@ input_file: tests/fixtures/any_of/any_of_with_constraint_to_type_1.json
     },
     Change {
         path: "",
-        change: TypeAdd {
-            added: String,
+        change: RangeAdd {
+            added: ExclusiveMaximum(
+                1.0,
+            ),
         },
     },
 ]
