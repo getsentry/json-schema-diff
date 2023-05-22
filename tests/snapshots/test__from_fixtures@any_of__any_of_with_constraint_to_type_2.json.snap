@@ -19,8 +19,9 @@ input_file: tests/fixtures/any_of/any_of_with_constraint_to_type_2.json
     Change {
         path: "",
         change: RangeRemove {
-            removed: Minimum,
-            value: 2.0,
+            removed: Minimum(
+                2.0,
+            ),
         },
     },
     Change {

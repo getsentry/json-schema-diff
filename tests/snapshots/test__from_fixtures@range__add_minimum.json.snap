@@ -13,8 +13,9 @@ input_file: tests/fixtures/range/add_minimum.json
     Change {
         path: "",
         change: RangeAdd {
-            added: Minimum,
-            value: 1.0,
+            added: Minimum(
+                1.0,
+            ),
         },
     },
 ]

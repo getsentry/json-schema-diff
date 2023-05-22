@@ -26,8 +26,9 @@ input_file: tests/fixtures/any_of/type_to_any_of_within_array.json
     Change {
         path: ".1",
         change: RangeAdd {
-            added: Minimum,
-            value: 1.0,
+            added: Minimum(
+                1.0,
+            ),
         },
     },
 ]

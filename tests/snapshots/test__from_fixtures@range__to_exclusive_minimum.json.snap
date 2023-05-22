@@ -6,9 +6,9 @@ info:
     minimum: 1
     type: number
   rhs:
-    minimum: 1.3
+    exclusiveMinimum: 1
     type: number
-input_file: tests/fixtures/range/change_minimum.json
+input_file: tests/fixtures/range/to_exclusive_minimum.json
 ---
 [
     Change {
@@ -17,8 +17,8 @@ input_file: tests/fixtures/range/change_minimum.json
             old_value: Minimum(
                 1.0,
             ),
-            new_value: Minimum(
-                1.3,
+            new_value: ExclusiveMinimum(
+                1.0,
             ),
         },
     },

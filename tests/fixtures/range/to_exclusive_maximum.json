@@ -1,0 +1,10 @@
+{
+  "lhs": {
+    "type": "number",
+    "maximum": 1.0
+  },
+  "rhs": {
+    "type": "number",
+    "exclusiveMaximum": 1.0
+  }
+}

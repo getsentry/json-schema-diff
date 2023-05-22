@@ -1,0 +1,26 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs:
+    exclusiveMinimum: 2
+    minimum: 1
+    type: number
+  rhs:
+    exclusiveMinimum: 0.4
+    type: number
+input_file: tests/fixtures/range/redundant_minimum_2.json
+---
+[
+    Change {
+        path: "",
+        change: RangeChange {
+            old_value: ExclusiveMinimum(
+                2.0,
+            ),
+            new_value: ExclusiveMinimum(
+                0.4,
+            ),
+        },
+    },
+]

@@ -1,0 +1,11 @@
+{
+  "lhs": {
+    "type": "number",
+    "minimum": 1.0,
+    "exclusiveMinimum": 1.0
+  },
+  "rhs": {
+    "type": "number",
+    "exclusiveMinimum": 0.4
+  }
+}

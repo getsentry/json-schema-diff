@@ -1,0 +1,10 @@
+{
+  "lhs": {
+    "minimum": 1,
+    "exclusiveMaximum": 100.0
+  },
+  "rhs": {
+    "exclusiveMinimum": 3,
+    "maximum": 30.0
+  }
+}
