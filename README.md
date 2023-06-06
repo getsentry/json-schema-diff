@@ -10,7 +10,11 @@ This crate is used with draft-07 but even that is work in progress.
 
 ## Usage via CLI
 
+[Install Rust](https://rustup.rs/) and:
+
 ```bash
+cargo install json-schema-diff
+
 cat schema-old.json schema-new.json
 # {"type": "string"}
 # {"type": "boolean"}
