@@ -1,4 +1,14 @@
 # Changelog and versioning
+## 0.1.7
+
+### Various fixes & improvements
+
+- fix: Add CLI install instructions (#37) by @untitaker
+- support `exclusive` keywords (#35) by @6293
+- do not clone Schema, clone only when the inner struct is Bool (#34) by @6293
+- rm unnecessary boxing (#33) by @6293
+- compare anyOf based on handmade diff score (#32) by @6293
+
 ## 0.1.6
 
 ### Various fixes & improvements
