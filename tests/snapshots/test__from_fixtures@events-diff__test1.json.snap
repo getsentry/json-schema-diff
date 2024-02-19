@@ -1,0 +1,48 @@
+---
+source: tests/test.rs
+expression: diff
+info:
+  lhs: {}
+  rhs:
+    anyOf:
+      - $ref: "#/definitions/myobject"
+      - $ref: "#/definitions/myarray"
+    definitions:
+      myarray:
+        type: array
+      myobject:
+        type: object
+input_file: tests/fixtures/events-diff/test1.json
+---
+[
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: String,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Number,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Integer,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Boolean,
+        },
+    },
+    Change {
+        path: "",
+        change: TypeRemove {
+            removed: Null,
+        },
+    },
+]
