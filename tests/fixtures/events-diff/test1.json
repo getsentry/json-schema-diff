@@ -1,0 +1,21 @@
+{
+  "lhs": {},
+  "rhs": {
+    "anyOf": [
+      {
+        "$ref": "#/definitions/myobject"
+      },
+      {
+        "$ref": "#/definitions/myarray"
+      }
+    ],
+    "definitions": {
+      "myobject": {
+        "type": "object"
+      },
+      "myarray": {
+        "type": "array"
+      }
+    }
+  }
+}
