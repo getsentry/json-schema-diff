@@ -117,7 +117,6 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                 },
             }),
             (Some(l), Some(r)) if l != r => {
-                if l.is_object() && r.is_object() {}
                 (self.cb)(Change {
                     path: json_path.to_owned(),
                     change: ChangeKind::ConstRemove { removed: l.clone() },
@@ -556,7 +555,7 @@ impl JsonSchemaExt for SchemaObject {
                 .any_of
                 .as_ref()
                 .filter(|schemas| schemas.len() == 1)
-                .and_then(|a| a.get(0))
+                .and_then(|a| a.first())
                 .map(|subschema| subschema.clone().into_object().number().clone())
                 .unwrap_or_default()
         } else {
