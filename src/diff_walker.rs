@@ -349,29 +349,23 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         Ok(())
     }
 
-    fn resolve_ref<'a>(root_schema: &'a RootSchema, reference: &str) -> Option<&'a Schema> {
-        if let Some(definition_name) = reference.strip_prefix("#/definitions/") {
-            let schema_object = root_schema.definitions.get(definition_name)?;
-            Some(schema_object)
-        } else {
-            None
-        }
-    }
-
     fn resolve_references(
-        &mut self,
-        lhs: &mut SchemaObject,
-        rhs: &mut SchemaObject,
+        root: &RootSchema,
+        obj: &mut SchemaObject,
     ) -> Result<(), Error> {
-        if let Some(ref reference) = lhs.reference {
-            if let Some(lhs_inner) = Self::resolve_ref(&self.lhs_root, reference) {
-                *lhs = lhs_inner.clone().into_object();
+        if let Some(ref reference) = obj.reference {
+            if let Some(definition_name) = reference.strip_prefix("#/definitions/") {
+                if let Some(schema_object) = root.definitions.get(definition_name) {
+                    *obj = schema_object.clone().into_object();
+                }
             }
         }
 
-        if let Some(ref reference) = rhs.reference {
-            if let Some(rhs_inner) = Self::resolve_ref(&self.rhs_root, reference) {
-                *rhs = rhs_inner.clone().into_object();
+        if let Some(ref mut any_of) = obj.subschemas().any_of {
+            for subschema in any_of {
+                if let Schema::Object(ref mut subobj) = subschema {
+                    Self::resolve_references(root, subobj)?;
+                }
             }
         }
 
@@ -458,7 +452,8 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
-        self.resolve_references(lhs, rhs)?;
+        Self::resolve_references(&self.lhs_root, lhs)?;
+        Self::resolve_references(&self.rhs_root, rhs)?;
         let is_lhs_split = Self::split_types(lhs);
         let is_rhs_split = Self::split_types(rhs);
         self.diff_any_of(json_path, is_rhs_split, lhs, rhs)?;
