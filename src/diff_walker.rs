@@ -7,20 +7,27 @@ use schemars::schema::{
 };
 use serde_json::Value;
 
+use crate::resolver::Resolver;
 use crate::{Change, ChangeKind, Error, JsonSchemaType, Range};
 
 pub struct DiffWalker<F: FnMut(Change)> {
     pub cb: F,
     pub lhs_root: RootSchema,
     pub rhs_root: RootSchema,
+    lhs_resolver: Resolver,
+    rhs_resolver: Resolver,
 }
 
 impl<F: FnMut(Change)> DiffWalker<F> {
     pub fn new(cb: F, lhs_root: RootSchema, rhs_root: RootSchema) -> Self {
+        let lhs_resolver = Resolver::for_schema(&lhs_root);
+        let rhs_resolver = Resolver::for_schema(&rhs_root);
         Self {
             cb,
             lhs_root,
             rhs_root,
+            lhs_resolver,
+            rhs_resolver,
         }
     }
 
@@ -349,28 +356,19 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         Ok(())
     }
 
-    fn resolve_ref<'a>(root_schema: &'a RootSchema, reference: &str) -> Option<&'a Schema> {
-        if let Some(definition_name) = reference.strip_prefix("#/definitions/") {
-            let schema_object = root_schema.definitions.get(definition_name)?;
-            Some(schema_object)
-        } else {
-            None
-        }
-    }
-
     fn resolve_references(
-        &mut self,
+        &self,
         lhs: &mut SchemaObject,
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
         if let Some(ref reference) = lhs.reference {
-            if let Some(lhs_inner) = Self::resolve_ref(&self.lhs_root, reference) {
+            if let Some(lhs_inner) = self.lhs_resolver.resolve(&self.lhs_root, reference) {
                 *lhs = lhs_inner.clone().into_object();
             }
         }
 
         if let Some(ref reference) = rhs.reference {
-            if let Some(rhs_inner) = Self::resolve_ref(&self.rhs_root, reference) {
+            if let Some(rhs_inner) = self.rhs_resolver.resolve(&self.rhs_root, reference) {
                 *rhs = rhs_inner.clone().into_object();
             }
         }
