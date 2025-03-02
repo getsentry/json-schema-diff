@@ -149,8 +149,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         let lhs_additional_properties = lhs
             .object()
             .additional_properties
-            .as_ref()
-            .map_or(true, |x| x.clone().into_object().is_true());
+            .as_ref().is_none_or(|x| x.clone().into_object().is_true());
 
         for removed in lhs_props.difference(&rhs_props) {
             (self.cb)(Change {
@@ -537,8 +536,7 @@ impl JsonSchemaExt for SchemaObject {
         } else if self
             .subschemas()
             .not
-            .as_ref()
-            .map_or(false, |x| x.clone().into_object().is_true())
+            .as_ref().is_some_and(|x| x.clone().into_object().is_true())
         {
             InternalJsonSchemaType::Never
         } else {
