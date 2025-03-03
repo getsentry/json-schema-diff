@@ -6,6 +6,7 @@ use serde_json::Value;
 use thiserror::Error;
 
 mod diff_walker;
+mod resolver;
 mod types;
 
 pub use types::*;
