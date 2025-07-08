@@ -1,0 +1,22 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    format: uuid
+    type: string
+  rhs:
+    format: date-time
+    type: string
+input_file: tests/fixtures/format/format_change.json
+---
+[
+    Change {
+        path: "",
+        change: FormatChange {
+            old_format: "uuid",
+            new_format: "date-time",
+        },
+    },
+]

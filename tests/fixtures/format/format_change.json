@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "string", "format": "uuid" },
+  "rhs": { "type": "string", "format": "date-time" }
+}

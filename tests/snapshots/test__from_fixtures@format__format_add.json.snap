@@ -1,0 +1,20 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    type: string
+  rhs:
+    format: email
+    type: string
+input_file: tests/fixtures/format/format_add.json
+---
+[
+    Change {
+        path: "",
+        change: FormatAdd {
+            added: "email",
+        },
+    },
+]

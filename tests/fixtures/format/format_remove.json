@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "string", "format": "uri" },
+  "rhs": { "type": "string" }
+}

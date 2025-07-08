@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "string", "format": "date" },
+  "rhs": { "type": "string", "format": "date" }
+}

@@ -1,0 +1,20 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    format: uri
+    type: string
+  rhs:
+    type: string
+input_file: tests/fixtures/format/format_remove.json
+---
+[
+    Change {
+        path: "",
+        change: FormatRemove {
+            removed: "uri",
+        },
+    },
+]
