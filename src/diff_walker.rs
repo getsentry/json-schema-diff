@@ -356,6 +356,37 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         Ok(())
     }
 
+    fn diff_format(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
+        match (&lhs.format, &rhs.format) {
+            (Some(lhs_fmt), Some(rhs_fmt)) if lhs_fmt != rhs_fmt => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::FormatChange {
+                        old_format: lhs_fmt.clone(),
+                        new_format: rhs_fmt.clone(),
+                    },
+                });
+            }
+            (Some(removed_fmt), None) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::FormatRemove {
+                        removed: removed_fmt.clone(),
+                    },
+                });
+            }
+            (None, Some(added_fmt)) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::FormatAdd {
+                        added: added_fmt.clone(),
+                    },
+                });
+            }
+            _ => {} // No change or both None
+        }
+    }
+
     fn resolve_references(
         &self,
         lhs: &mut SchemaObject,
@@ -464,6 +495,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
             self.diff_instance_types(json_path, lhs, rhs);
         }
         self.diff_const(json_path, lhs, rhs);
+        self.diff_format(json_path, lhs, rhs);
         // If we split the types, we don't want to compare type-specific properties
         // because they are already compared in the `Self::diff_any_of`
         if !is_lhs_split && !is_rhs_split {

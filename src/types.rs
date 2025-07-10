@@ -107,6 +107,23 @@ pub enum ChangeKind {
         /// The property that is now required
         property: String,
     },
+    /// A format constraint has been added.
+    FormatAdd {
+        /// The format that was added.
+        added: String,
+    },
+    /// A format constraint has been removed.
+    FormatRemove {
+        /// The format that was removed.
+        removed: String,
+    },
+    /// A format constraint has been changed.
+    FormatChange {
+        /// The old format value.
+        old_format: String,
+        /// The new format value.
+        new_format: String,
+    },
 }
 
 impl ChangeKind {
@@ -150,6 +167,9 @@ impl ChangeKind {
             Self::TupleChange { .. } => true,
             Self::RequiredRemove { .. } => false,
             Self::RequiredAdd { .. } => true,
+            Self::FormatAdd { .. } => true,
+            Self::FormatRemove { .. } => false,
+            Self::FormatChange { .. } => true,
         }
     }
 }

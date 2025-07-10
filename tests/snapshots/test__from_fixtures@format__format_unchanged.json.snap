@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    format: date
+    type: string
+  rhs:
+    format: date
+    type: string
+input_file: tests/fixtures/format/format_unchanged.json
+---
+[]
