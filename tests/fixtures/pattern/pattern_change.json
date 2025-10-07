@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "string", "pattern": "^[a-z]+$" },
+  "rhs": { "type": "string", "pattern": "^[A-Z]+$" }
+}
