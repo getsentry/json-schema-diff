@@ -1,0 +1,10 @@
+{
+  "lhs": {
+    "type": "string",
+    "enum": ["expectct", "expectstaple", "transaction", "default"]
+  },
+  "rhs": {
+    "type": "string",
+    "enum": ["expectct", "expectstaple", "transaction", "default", "generic"]
+  }
+}

@@ -1,0 +1,38 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    type: string
+  rhs:
+    enum:
+      - error
+      - warning
+      - info
+    type: string
+input_file: tests/fixtures/enum/add_constraint.json
+---
+[
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: String("error"),
+            lhs_has_no_enum: true,
+        },
+    },
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: String("warning"),
+            lhs_has_no_enum: true,
+        },
+    },
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: String("info"),
+            lhs_has_no_enum: true,
+        },
+    },
+]

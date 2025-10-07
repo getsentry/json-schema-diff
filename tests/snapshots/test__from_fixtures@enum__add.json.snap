@@ -1,0 +1,29 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    enum:
+      - error
+      - warning
+      - info
+    type: string
+  rhs:
+    enum:
+      - error
+      - warning
+      - info
+      - debug
+    type: string
+input_file: tests/fixtures/enum/add.json
+---
+[
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: String("debug"),
+            lhs_has_no_enum: false,
+        },
+    },
+]

@@ -1,0 +1,8 @@
+{
+  "lhs": {
+    "enum": ["error", 1, null, true]
+  },
+  "rhs": {
+    "enum": ["error", 1, null, true, "warning"]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "lhs": {
+    "type": "integer",
+    "enum": [1, 2, 3]
+  },
+  "rhs": {
+    "type": "integer",
+    "enum": [1, 2, 3, 4]
+  }
+}
