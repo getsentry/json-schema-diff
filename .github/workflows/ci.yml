@@ -7,17 +7,13 @@ on:
       - "release/**"
   pull_request:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   lints:
     name: Lints
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v2
+        uses: actions/checkout@v2
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -45,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v2
+        uses: actions/checkout@v2
 
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
