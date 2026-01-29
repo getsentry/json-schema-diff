@@ -1,4 +1,29 @@
 # Changelog and versioning
+## 0.1.8
+
+### New Features ✨
+
+- (release) Replace release bot with GH app by @Jeffreyhung in [#41](https://github.com/getsentry/json-schema-diff/pull/41)
+- Add enum support with context-aware breaking change detection by @domdomegg in [#46](https://github.com/getsentry/json-schema-diff/pull/46)
+- Add string validation support (pattern, minLength, maxLength) by @domdomegg in [#51](https://github.com/getsentry/json-schema-diff/pull/51)
+- Support format by @brhutchins in [#45](https://github.com/getsentry/json-schema-diff/pull/45)
+- Support custom ids and $defs from draft 2020-12 by @cakemanny in [#44](https://github.com/getsentry/json-schema-diff/pull/44)
+
+### Internal Changes 🔧
+
+#### Release
+
+- Fix changelog-preview permissions by @BYK in [#54](https://github.com/getsentry/json-schema-diff/pull/54)
+- Switch from action-prepare-release to Craft by @BYK in [#52](https://github.com/getsentry/json-schema-diff/pull/52)
+
+#### Other
+
+- Use pull_request_target for changelog preview by @BYK in [#53](https://github.com/getsentry/json-schema-diff/pull/53)
+
+### Other
+
+- Fix clippy lints by @untitaker in [#42](https://github.com/getsentry/json-schema-diff/pull/42)
+
 ## 0.1.7
 
 ### Various fixes & improvements
