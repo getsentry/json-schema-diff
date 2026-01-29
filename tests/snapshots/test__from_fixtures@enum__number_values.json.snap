@@ -1,0 +1,29 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    enum:
+      - 1
+      - 2
+      - 3
+    type: integer
+  rhs:
+    enum:
+      - 1
+      - 2
+      - 3
+      - 4
+    type: integer
+input_file: tests/fixtures/enum/number_values.json
+---
+[
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: Number(4),
+            lhs_has_no_enum: false,
+        },
+    },
+]

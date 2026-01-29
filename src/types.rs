@@ -124,6 +124,22 @@ pub enum ChangeKind {
         /// The new format value.
         new_format: String,
     },
+    /// An enum value has been added to the allowed values.
+    EnumAdd {
+        /// The value that was added to the enum.
+        added: serde_json::Value,
+        /// Whether the enum constraint was added (lhs had no enum).
+        /// If true, this is breaking as it adds a new constraint.
+        lhs_has_no_enum: bool,
+    },
+    /// An enum value has been removed from the allowed values.
+    EnumRemove {
+        /// The value that was removed from the enum.
+        removed: serde_json::Value,
+        /// Whether the entire enum constraint was removed (rhs has no enum).
+        /// If true, this is non-breaking as it relaxes the constraint.
+        rhs_has_no_enum: bool,
+    },
     /// A pattern constraint has been added.
     PatternAdd {
         /// The pattern that was added.
@@ -221,6 +237,16 @@ impl ChangeKind {
             Self::FormatAdd { .. } => true,
             Self::FormatRemove { .. } => false,
             Self::FormatChange { .. } => true,
+            // EnumAdd is breaking only if it adds a new enum constraint (lhs had no enum).
+            // Adding values to an existing enum is non-breaking (accepts more data).
+            Self::EnumAdd {
+                lhs_has_no_enum, ..
+            } => *lhs_has_no_enum,
+            // EnumRemove is breaking if removing values from a surviving enum constraint.
+            // Removing the entire enum constraint is non-breaking (accepts more data).
+            Self::EnumRemove {
+                rhs_has_no_enum, ..
+            } => !rhs_has_no_enum,
             // Pattern changes are conservatively treated as breaking.
             // Determining if one regex is a subset of another requires complex analysis.
             Self::PatternAdd { .. } => true,

@@ -1,0 +1,31 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    enum:
+      - expectct
+      - expectstaple
+      - transaction
+      - default
+    type: string
+  rhs:
+    enum:
+      - expectct
+      - expectstaple
+      - transaction
+      - default
+      - generic
+    type: string
+input_file: tests/fixtures/enum/real_world_event_type.json
+---
+[
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: String("generic"),
+            lhs_has_no_enum: false,
+        },
+    },
+]

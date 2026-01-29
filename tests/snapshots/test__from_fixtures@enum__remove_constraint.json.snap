@@ -1,0 +1,38 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    enum:
+      - error
+      - warning
+      - info
+    type: string
+  rhs:
+    type: string
+input_file: tests/fixtures/enum/remove_constraint.json
+---
+[
+    Change {
+        path: "",
+        change: EnumRemove {
+            removed: String("error"),
+            rhs_has_no_enum: true,
+        },
+    },
+    Change {
+        path: "",
+        change: EnumRemove {
+            removed: String("warning"),
+            rhs_has_no_enum: true,
+        },
+    },
+    Change {
+        path: "",
+        change: EnumRemove {
+            removed: String("info"),
+            rhs_has_no_enum: true,
+        },
+    },
+]

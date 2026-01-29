@@ -387,6 +387,39 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         }
     }
 
+    fn diff_enum(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
+        let lhs_enum = lhs.enum_values.as_deref().unwrap_or(&[]);
+        let rhs_enum = rhs.enum_values.as_deref().unwrap_or(&[]);
+        let lhs_has_no_enum = lhs.enum_values.is_none();
+        let rhs_has_no_enum = rhs.enum_values.is_none();
+
+        // Find removed enum values (in lhs but not in rhs)
+        for lhs_value in lhs_enum {
+            if !rhs_enum.contains(lhs_value) {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::EnumRemove {
+                        removed: lhs_value.clone(),
+                        rhs_has_no_enum,
+                    },
+                });
+            }
+        }
+
+        // Find added enum values (in rhs but not in lhs)
+        for rhs_value in rhs_enum {
+            if !lhs_enum.contains(rhs_value) {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::EnumAdd {
+                        added: rhs_value.clone(),
+                        lhs_has_no_enum,
+                    },
+                });
+            }
+        }
+    }
+
     fn diff_pattern(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
         let lhs_pattern = &lhs.string().pattern;
         let rhs_pattern = &rhs.string().pattern;
@@ -594,6 +627,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         }
         self.diff_const(json_path, lhs, rhs);
         self.diff_format(json_path, lhs, rhs);
+        self.diff_enum(json_path, lhs, rhs);
         self.diff_pattern(json_path, lhs, rhs);
         self.diff_min_length(json_path, lhs, rhs);
         self.diff_max_length(json_path, lhs, rhs);

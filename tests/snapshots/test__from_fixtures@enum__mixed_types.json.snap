@@ -1,0 +1,29 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    enum:
+      - error
+      - 1
+      - ~
+      - true
+  rhs:
+    enum:
+      - error
+      - 1
+      - ~
+      - true
+      - warning
+input_file: tests/fixtures/enum/mixed_types.json
+---
+[
+    Change {
+        path: "",
+        change: EnumAdd {
+            added: String("warning"),
+            lhs_has_no_enum: false,
+        },
+    },
+]

@@ -1,0 +1,10 @@
+{
+  "lhs": {
+    "type": "string",
+    "enum": ["error", "warning", "debug"]
+  },
+  "rhs": {
+    "type": "string",
+    "enum": ["error", "info", "debug"]
+  }
+}

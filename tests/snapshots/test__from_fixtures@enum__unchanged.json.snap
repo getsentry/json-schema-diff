@@ -1,0 +1,20 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    enum:
+      - error
+      - warning
+      - info
+    type: string
+  rhs:
+    enum:
+      - error
+      - warning
+      - info
+    type: string
+input_file: tests/fixtures/enum/unchanged.json
+---
+[]
