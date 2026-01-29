@@ -421,12 +421,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         }
     }
 
-    fn diff_min_length(
-        &mut self,
-        json_path: &str,
-        lhs: &mut SchemaObject,
-        rhs: &mut SchemaObject,
-    ) {
+    fn diff_min_length(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
         let lhs_min = lhs.string().min_length;
         let rhs_min = rhs.string().min_length;
 
@@ -458,12 +453,7 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         }
     }
 
-    fn diff_max_length(
-        &mut self,
-        json_path: &str,
-        lhs: &mut SchemaObject,
-        rhs: &mut SchemaObject,
-    ) {
+    fn diff_max_length(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
         let lhs_max = lhs.string().max_length;
         let rhs_max = rhs.string().max_length;
 
