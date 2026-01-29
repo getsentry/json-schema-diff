@@ -1,0 +1,4 @@
+{
+  "lhs": { "type": "string", "minLength": 5 },
+  "rhs": { "type": "string" }
+}

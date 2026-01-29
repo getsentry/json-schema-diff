@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    maxLength: 10
+    type: string
+  rhs:
+    maxLength: 10
+    type: string
+input_file: tests/fixtures/max_length/max_length_unchanged.json
+---
+[]

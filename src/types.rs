@@ -124,6 +124,57 @@ pub enum ChangeKind {
         /// The new format value.
         new_format: String,
     },
+    /// A pattern constraint has been added.
+    PatternAdd {
+        /// The pattern that was added.
+        added: String,
+    },
+    /// A pattern constraint has been removed.
+    PatternRemove {
+        /// The pattern that was removed.
+        removed: String,
+    },
+    /// A pattern constraint has been changed.
+    PatternChange {
+        /// The old pattern value.
+        old_pattern: String,
+        /// The new pattern value.
+        new_pattern: String,
+    },
+    /// A minLength constraint has been added.
+    MinLengthAdd {
+        /// The minLength value that was added.
+        added: u32,
+    },
+    /// A minLength constraint has been removed.
+    MinLengthRemove {
+        /// The minLength value that was removed.
+        removed: u32,
+    },
+    /// A minLength constraint has been changed.
+    MinLengthChange {
+        /// The old minLength value.
+        old_value: u32,
+        /// The new minLength value.
+        new_value: u32,
+    },
+    /// A maxLength constraint has been added.
+    MaxLengthAdd {
+        /// The maxLength value that was added.
+        added: u32,
+    },
+    /// A maxLength constraint has been removed.
+    MaxLengthRemove {
+        /// The maxLength value that was removed.
+        removed: u32,
+    },
+    /// A maxLength constraint has been changed.
+    MaxLengthChange {
+        /// The old maxLength value.
+        old_value: u32,
+        /// The new maxLength value.
+        new_value: u32,
+    },
 }
 
 impl ChangeKind {
@@ -170,6 +221,25 @@ impl ChangeKind {
             Self::FormatAdd { .. } => true,
             Self::FormatRemove { .. } => false,
             Self::FormatChange { .. } => true,
+            // Pattern changes are conservatively treated as breaking.
+            // Determining if one regex is a subset of another requires complex analysis.
+            Self::PatternAdd { .. } => true,
+            Self::PatternRemove { .. } => false,
+            Self::PatternChange { .. } => true,
+            // MinLength: increasing restricts (breaking), decreasing relaxes (non-breaking)
+            Self::MinLengthAdd { .. } => true,
+            Self::MinLengthRemove { .. } => false,
+            Self::MinLengthChange {
+                old_value,
+                new_value,
+            } => new_value > old_value,
+            // MaxLength: decreasing restricts (breaking), increasing relaxes (non-breaking)
+            Self::MaxLengthAdd { .. } => true,
+            Self::MaxLengthRemove { .. } => false,
+            Self::MaxLengthChange {
+                old_value,
+                new_value,
+            } => new_value < old_value,
         }
     }
 }

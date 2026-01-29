@@ -1,0 +1,22 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    minLength: 5
+    type: string
+  rhs:
+    minLength: 3
+    type: string
+input_file: tests/fixtures/min_length/min_length_decrease.json
+---
+[
+    Change {
+        path: "",
+        change: MinLengthChange {
+            old_value: 5,
+            new_value: 3,
+        },
+    },
+]

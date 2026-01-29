@@ -1,0 +1,20 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    type: string
+  rhs:
+    pattern: "^[a-z]+$"
+    type: string
+input_file: tests/fixtures/pattern/pattern_add.json
+---
+[
+    Change {
+        path: "",
+        change: PatternAdd {
+            added: "^[a-z]+$",
+        },
+    },
+]

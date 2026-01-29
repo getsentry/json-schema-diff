@@ -1,0 +1,20 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    minLength: 5
+    type: string
+  rhs:
+    type: string
+input_file: tests/fixtures/min_length/min_length_remove.json
+---
+[
+    Change {
+        path: "",
+        change: MinLengthRemove {
+            removed: 5,
+        },
+    },
+]
