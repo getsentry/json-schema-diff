@@ -139,6 +139,56 @@ pub enum ChangeKind {
         /// Whether the entire enum constraint was removed (rhs has no enum).
         /// If true, this is non-breaking as it relaxes the constraint.
         rhs_has_no_enum: bool,
+    /// A pattern constraint has been added.
+    PatternAdd {
+        /// The pattern that was added.
+        added: String,
+    },
+    /// A pattern constraint has been removed.
+    PatternRemove {
+        /// The pattern that was removed.
+        removed: String,
+    },
+    /// A pattern constraint has been changed.
+    PatternChange {
+        /// The old pattern value.
+        old_pattern: String,
+        /// The new pattern value.
+        new_pattern: String,
+    },
+    /// A minLength constraint has been added.
+    MinLengthAdd {
+        /// The minLength value that was added.
+        added: u32,
+    },
+    /// A minLength constraint has been removed.
+    MinLengthRemove {
+        /// The minLength value that was removed.
+        removed: u32,
+    },
+    /// A minLength constraint has been changed.
+    MinLengthChange {
+        /// The old minLength value.
+        old_value: u32,
+        /// The new minLength value.
+        new_value: u32,
+    },
+    /// A maxLength constraint has been added.
+    MaxLengthAdd {
+        /// The maxLength value that was added.
+        added: u32,
+    },
+    /// A maxLength constraint has been removed.
+    MaxLengthRemove {
+        /// The maxLength value that was removed.
+        removed: u32,
+    },
+    /// A maxLength constraint has been changed.
+    MaxLengthChange {
+        /// The old maxLength value.
+        old_value: u32,
+        /// The new maxLength value.
+        new_value: u32,
     },
 }
 
@@ -192,6 +242,25 @@ impl ChangeKind {
             // EnumRemove is breaking if removing values from a surviving enum constraint.
             // Removing the entire enum constraint is non-breaking (accepts more data).
             Self::EnumRemove { rhs_has_no_enum, .. } => !rhs_has_no_enum,
+            // Pattern changes are conservatively treated as breaking.
+            // Determining if one regex is a subset of another requires complex analysis.
+            Self::PatternAdd { .. } => true,
+            Self::PatternRemove { .. } => false,
+            Self::PatternChange { .. } => true,
+            // MinLength: increasing restricts (breaking), decreasing relaxes (non-breaking)
+            Self::MinLengthAdd { .. } => true,
+            Self::MinLengthRemove { .. } => false,
+            Self::MinLengthChange {
+                old_value,
+                new_value,
+            } => new_value > old_value,
+            // MaxLength: decreasing restricts (breaking), increasing relaxes (non-breaking)
+            Self::MaxLengthAdd { .. } => true,
+            Self::MaxLengthRemove { .. } => false,
+            Self::MaxLengthChange {
+                old_value,
+                new_value,
+            } => new_value < old_value,
         }
     }
 }

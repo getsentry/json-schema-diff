@@ -417,6 +417,101 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                     },
                 });
             }
+    fn diff_pattern(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
+        let lhs_pattern = &lhs.string().pattern;
+        let rhs_pattern = &rhs.string().pattern;
+
+        match (lhs_pattern, rhs_pattern) {
+            (Some(lhs_pat), Some(rhs_pat)) if lhs_pat != rhs_pat => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::PatternChange {
+                        old_pattern: lhs_pat.clone(),
+                        new_pattern: rhs_pat.clone(),
+                    },
+                });
+            }
+            (Some(removed_pat), None) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::PatternRemove {
+                        removed: removed_pat.clone(),
+                    },
+                });
+            }
+            (None, Some(added_pat)) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::PatternAdd {
+                        added: added_pat.clone(),
+                    },
+                });
+            }
+            _ => {} // No change or both None
+        }
+    }
+
+    fn diff_min_length(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
+        let lhs_min = lhs.string().min_length;
+        let rhs_min = rhs.string().min_length;
+
+        match (lhs_min, rhs_min) {
+            (Some(lhs_val), Some(rhs_val)) if lhs_val != rhs_val => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::MinLengthChange {
+                        old_value: lhs_val,
+                        new_value: rhs_val,
+                    },
+                });
+            }
+            (Some(removed_val), None) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::MinLengthRemove {
+                        removed: removed_val,
+                    },
+                });
+            }
+            (None, Some(added_val)) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::MinLengthAdd { added: added_val },
+                });
+            }
+            _ => {} // No change or both None
+        }
+    }
+
+    fn diff_max_length(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
+        let lhs_max = lhs.string().max_length;
+        let rhs_max = rhs.string().max_length;
+
+        match (lhs_max, rhs_max) {
+            (Some(lhs_val), Some(rhs_val)) if lhs_val != rhs_val => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::MaxLengthChange {
+                        old_value: lhs_val,
+                        new_value: rhs_val,
+                    },
+                });
+            }
+            (Some(removed_val), None) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::MaxLengthRemove {
+                        removed: removed_val,
+                    },
+                });
+            }
+            (None, Some(added_val)) => {
+                (self.cb)(Change {
+                    path: json_path.to_owned(),
+                    change: ChangeKind::MaxLengthAdd { added: added_val },
+                });
+            }
+            _ => {} // No change or both None
         }
     }
 
@@ -530,6 +625,9 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         self.diff_const(json_path, lhs, rhs);
         self.diff_format(json_path, lhs, rhs);
         self.diff_enum(json_path, lhs, rhs);
+        self.diff_pattern(json_path, lhs, rhs);
+        self.diff_min_length(json_path, lhs, rhs);
+        self.diff_max_length(json_path, lhs, rhs);
         // If we split the types, we don't want to compare type-specific properties
         // because they are already compared in the `Self::diff_any_of`
         if !is_lhs_split && !is_rhs_split {

@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    pattern: "^[a-z]+$"
+    type: string
+  rhs:
+    pattern: "^[a-z]+$"
+    type: string
+input_file: tests/fixtures/pattern/pattern_unchanged.json
+---
+[]

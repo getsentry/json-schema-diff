@@ -1,0 +1,14 @@
+---
+source: tests/test.rs
+assertion_line: 12
+expression: diff
+info:
+  lhs:
+    minLength: 5
+    type: string
+  rhs:
+    minLength: 5
+    type: string
+input_file: tests/fixtures/min_length/min_length_unchanged.json
+---
+[]
