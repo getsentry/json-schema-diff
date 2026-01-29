@@ -417,6 +417,9 @@ impl<F: FnMut(Change)> DiffWalker<F> {
                     },
                 });
             }
+        }
+    }
+
     fn diff_pattern(&mut self, json_path: &str, lhs: &mut SchemaObject, rhs: &mut SchemaObject) {
         let lhs_pattern = &lhs.string().pattern;
         let rhs_pattern = &rhs.string().pattern;
