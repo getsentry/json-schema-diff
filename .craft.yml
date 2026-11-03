@@ -1,8 +1,12 @@
-minVersion: 0.34.1
+minVersion: 3.9.0
 github:
   owner: getsentry
   repo: json-schema-diff
-changelogPolicy: auto
+changelog:
+  policy: auto
+versioning:
+  policy: manual
+preReleaseCommand: bash scripts/bump-version.sh
 artifactProvider:
   name: none
 targets:
