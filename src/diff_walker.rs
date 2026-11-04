@@ -555,6 +555,121 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         Schema::Object(ret)
     }
 
+    fn merge_type_only_schemas(lhs: &Schema, rhs: &Schema) -> Option<Schema> {
+        if lhs == rhs {
+            return Some(lhs.clone());
+        }
+
+        let (Schema::Object(mut lhs), Schema::Object(mut rhs)) = (lhs.clone(), rhs.clone()) else {
+            return None;
+        };
+        let lhs_types = lhs.instance_type.take()?;
+        let rhs_types = rhs.instance_type.take()?;
+        if lhs != rhs {
+            return None;
+        }
+
+        let mut merged_types: Vec<InstanceType> = Vec::new();
+        for types in [lhs_types, rhs_types] {
+            match types {
+                SingleOrVec::Single(ty) => {
+                    if !merged_types.contains(&*ty) {
+                        merged_types.push(*ty);
+                    }
+                }
+                SingleOrVec::Vec(types) => {
+                    for ty in types {
+                        if !merged_types.contains(&ty) {
+                            merged_types.push(ty);
+                        }
+                    }
+                }
+            }
+        }
+
+        lhs.instance_type = Some(if merged_types.len() == 1 {
+            SingleOrVec::Single(Box::new(merged_types[0]))
+        } else {
+            SingleOrVec::Vec(merged_types)
+        });
+        Some(Schema::Object(lhs))
+    }
+
+    fn merge_object_branches(mut lhs: SchemaObject, rhs: SchemaObject) -> Option<SchemaObject> {
+        let mut lhs_shape = lhs.clone();
+        let mut rhs_shape = rhs;
+        let lhs_properties = std::mem::take(&mut lhs_shape.object.as_mut()?.properties);
+        let rhs_properties = std::mem::take(&mut rhs_shape.object.as_mut()?.properties);
+
+        if lhs_shape != rhs_shape || lhs_properties.keys().ne(rhs_properties.keys()) {
+            return None;
+        }
+
+        let mut differing_properties = 0;
+        let mut merged_properties = BTreeMap::new();
+        for (name, lhs_property) in lhs_properties {
+            let rhs_property = rhs_properties.get(&name)?;
+            let merged_property = if lhs_property == *rhs_property {
+                lhs_property
+            } else {
+                differing_properties += 1;
+                // Merging multiple varying properties would widen correlated branches.
+                if differing_properties > 1 {
+                    return None;
+                }
+                Self::merge_type_only_schemas(&lhs_property, rhs_property)?
+            };
+            merged_properties.insert(name, merged_property);
+        }
+
+        lhs.object.as_mut()?.properties = merged_properties;
+        Some(lhs)
+    }
+
+    // Collapse only a pure union of otherwise identical object branches.
+    fn collapse_object_any_of(schema_object: &mut SchemaObject) -> bool {
+        let Some(subschemas) = schema_object.subschemas.as_ref() else {
+            return false;
+        };
+        let Some(any_of) = subschemas.any_of.as_ref() else {
+            return false;
+        };
+        if any_of.len() < 2 {
+            return false;
+        }
+
+        let mut outer_schema = schema_object.clone();
+        let outer_subschemas = outer_schema.subschemas.as_mut().unwrap();
+        outer_subschemas.any_of = None;
+        if **outer_subschemas == SubschemaValidation::default() {
+            outer_schema.subschemas = None;
+        }
+        if outer_schema != SchemaObject::default() {
+            return false;
+        }
+
+        let mut branches = any_of.iter();
+        let Some(Schema::Object(first)) = branches.next() else {
+            return false;
+        };
+        if first.object.is_none() {
+            return false;
+        }
+        let mut merged = first.clone();
+        for branch in branches {
+            let Schema::Object(branch) = branch else {
+                return false;
+            };
+            let Some(next) = Self::merge_object_branches(merged, branch.clone()) else {
+                return false;
+            };
+            merged = next;
+        }
+
+        *schema_object = merged;
+        true
+    }
+
     /// Split a schema into multiple schemas, one for each type in the multiple type.
     /// Returns the new schema and whether the schema was changed.
     fn split_types(schema_object: &mut SchemaObject) -> bool {
@@ -619,6 +734,8 @@ impl<F: FnMut(Change)> DiffWalker<F> {
         rhs: &mut SchemaObject,
     ) -> Result<(), Error> {
         self.resolve_references(lhs, rhs)?;
+        Self::collapse_object_any_of(lhs);
+        Self::collapse_object_any_of(rhs);
         let is_lhs_split = Self::split_types(lhs);
         let is_rhs_split = Self::split_types(rhs);
         self.diff_any_of(json_path, is_rhs_split, lhs, rhs)?;
